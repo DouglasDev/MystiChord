@@ -1,0 +1,34 @@
+:root {
+  --aura-rgb: 76, 240, 255;
+  --aura-hex: #28a8ff;
+  --wood-dark: #1b110a;
+  --brass-light: #e2be78;
+  --brass-mid: #b38942;
+  --ivory-text: #ead8b8;
+  --muted-brass: rgba(226, 190, 120, 0.62);
+  font-family: 'Cinzel', 'Palatino Linotype', 'Book Antiqua', Georgia, serif;
+  color: var(--ivory-text);
+  background: var(--wood-dark);
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html,
+body,
+#app {
+  width: 100%;
+  height: 100dvh;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
