@@ -65,14 +65,14 @@ export interface AuraColors {
 export const PITCH_GLYPHS = ['Γ', 'Γ̇', 'Δ', 'Δ̇', 'Ζ', 'Θ', 'Θ̇', 'Λ', 'Ξ', 'Π', 'Φ', 'Ψ'] as const;
 
 /**
- * Seven mystical non-major/non-minor scales paired with obscure Greek,
- * Latin, and Early English emotion words.
+ * Seven mystical non-major/non-minor scales from diverse traditions,
+ * paired with obscure ancient Greek emotion words.
  */
 export const MOODS: Record<MoodKey, MoodDefinition> = {
   blue: {
     key: 'blue',
     label: 'Ataraxia',
-    origin: 'Greek — stillness',
+    origin: 'stillness',
     scaleName: 'Scriabin Prometheus',
     description:
       'Hexatonic scale derived from Scriabin’s Mystic Chord; weightless quartal and tritone harmony. Modulates up a fourth (+P4).',
@@ -86,8 +86,8 @@ export const MOODS: Record<MoodKey, MoodDefinition> = {
   },
   green: {
     key: 'green',
-    label: 'Alacritas',
-    origin: 'Latin — lively eagerness',
+    label: 'Eutrapelia',
+    origin: 'lively grace',
     scaleName: 'Satie Gnossienne (Dorian ♯4)',
     description:
       'Used in Erik Satie’s Gnossiennes; a raised fourth creates an augmented second with a buoyant, ancient lilt. Modulates up a fifth (+P5).',
@@ -101,8 +101,8 @@ export const MOODS: Record<MoodKey, MoodDefinition> = {
   },
   purple: {
     key: 'purple',
-    label: 'Wanhope',
-    origin: 'Early English — sorrow',
+    label: 'Penthos',
+    origin: 'sacred sorrow',
     scaleName: 'Raga Todi',
     description:
       'Hindustani morning raga pairing flat second, flat third, and sharp fourth for poignant, devotional melancholy. Modulates down a major third (−M3).',
@@ -117,7 +117,7 @@ export const MOODS: Record<MoodKey, MoodDefinition> = {
   red: {
     key: 'red',
     label: 'Agonia',
-    origin: 'Greek — taut struggle',
+    origin: 'taut struggle',
     scaleName: 'Raga Marwa',
     description:
       'Hindustani dusk raga that omits the fifth entirely, suspending melodies between a flat second and sharp fourth. Modulates by a tritone (+TT).',
@@ -132,10 +132,10 @@ export const MOODS: Record<MoodKey, MoodDefinition> = {
   amber: {
     key: 'amber',
     label: 'Thauma',
-    origin: 'Greek — wonder',
-    scaleName: 'Raga Bhairav (Double Harmonic)',
+    origin: 'wonder',
+    scaleName: 'Maqam Hijaz Kar',
     description:
-      'Symmetric scale with two augmented seconds, evoking dawn ritual and sacred awe. Modulates up a major third (+M3).',
+      'Classical Middle Eastern and Byzantine modal scale with two symmetric augmented seconds, evoking temple ritual and awe. Modulates up a major third (+M3).',
     intervals: [0, 1, 4, 5, 7, 8, 11],
     modulationSemitones: 4,
     modulationLabel: '+M3',
@@ -147,11 +147,11 @@ export const MOODS: Record<MoodKey, MoodDefinition> = {
   teal: {
     key: 'teal',
     label: 'Pothos',
-    origin: 'Greek — mythic longing',
-    scaleName: 'Raga Purvi',
+    origin: 'mythic longing',
+    scaleName: 'Miyako-bushi (In Scale)',
     description:
-      'Twilight raga combining a major third with a sharp fourth and flat sixth for bittersweet yearning. Modulates down a minor third (−m3).',
-    intervals: [0, 1, 4, 6, 7, 8, 11],
+      'Traditional Japanese koto and shakuhachi mode anchored by haunting flat-second and flat-sixth pulls for bittersweet yearning. Modulates down a minor third (−m3).',
+    intervals: [0, 1, 5, 7, 8, 10],
     modulationSemitones: -3,
     modulationLabel: '−m3',
     rune: '☤',
@@ -162,7 +162,7 @@ export const MOODS: Record<MoodKey, MoodDefinition> = {
   rose: {
     key: 'rose',
     label: 'Ekstasis',
-    origin: 'Greek — trance',
+    origin: 'trance',
     scaleName: 'Scriabin Octatonic',
     description:
       'Eight-note alternating half-whole diminished scale favored in late Scriabin for hypnotic, swirling tension. Modulates up a semitone (+m2).',
