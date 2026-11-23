@@ -2,6 +2,17 @@ import { styled } from '@linaria/react';
 import { useEffect, useRef } from 'react';
 import { computeBoundedBend, getPitchGlyph, yToScalePitch, type RgbTuple } from '../musicTheory';
 
+const PAD_Y_INSET = 0.04;
+const PAD_Y_SPAN = 1 - PAD_Y_INSET * 2;
+
+function rawYToScaleY(rawY: number): number {
+  return Math.max(0, Math.min(1, (rawY - PAD_Y_INSET) / PAD_Y_SPAN));
+}
+
+function scaleNormToCanvasY(scaleNorm: number, height: number): number {
+  return height * (1 - (PAD_Y_INSET + scaleNorm * PAD_Y_SPAN));
+}
+
 const PadArea = styled.section`
   position: relative;
   min-width: 0;
@@ -223,7 +234,8 @@ export function PadPanel({
     ];
 
     const st = stateRef.current;
-    const info = yToScalePitch(st.currentY, padRootMidi, intervals, 2);
+    const scaleY = rawYToScaleY(st.currentY);
+    const info = yToScalePitch(scaleY, padRootMidi, intervals, 2);
 
     scaleRef.current = { rootMidi: padRootMidi, intervals, notes: info.notes };
 
@@ -231,7 +243,7 @@ export function PadPanel({
       st.anchorIndex = Math.min(info.notes.length - 1, info.snappedIndex);
       st.activeTargetIndex = st.anchorIndex;
       st.snappedToNeighbor = false;
-      st.anchorY = st.currentY;
+      st.anchorY = scaleY;
       callbacksRef.current.onPadMove(info.snappedFreq, st.currentX, st.currentY, 0, false);
     }
   }, [padRootMidi, intervals, auraRgb]);
@@ -276,15 +288,16 @@ export function PadPanel({
       canvas.setPointerCapture(e.pointerId);
 
       const { x, y } = normCoords(e);
+      const scaleY = rawYToScaleY(y);
       const { rootMidi, intervals: ivs } = scaleRef.current;
-      const pitchInfo = yToScalePitch(y, rootMidi, ivs, 2);
+      const pitchInfo = yToScalePitch(scaleY, rootMidi, ivs, 2);
 
       scaleRef.current.notes = pitchInfo.notes;
 
       st.anchorIndex = pitchInfo.snappedIndex;
       st.activeTargetIndex = pitchInfo.snappedIndex;
       st.snappedToNeighbor = false;
-      st.anchorY = y;
+      st.anchorY = scaleY;
       st.lastX = x;
       st.lastY = y;
       st.currentX = x;
@@ -305,6 +318,7 @@ export function PadPanel({
 
       e.preventDefault();
       const { x, y } = normCoords(e);
+      const scaleY = rawYToScaleY(y);
       const dx = x - st.lastX;
       const dy = y - st.lastY;
       const motionEnergy = Math.hypot(dx, dy);
@@ -315,7 +329,7 @@ export function PadPanel({
       st.currentY = y;
       st.vibratoGlow = Math.min(1, st.vibratoGlow + motionEnergy * 3.5);
 
-      const deltaY = y - st.anchorY;
+      const deltaY = scaleY - st.anchorY;
       const bent = computeBoundedBend(st.anchorIndex, deltaY, scaleRef.current.notes);
       const justLocked = bent.snappedToNeighbor && !st.snappedToNeighbor;
 
@@ -470,7 +484,7 @@ export function PadPanel({
 
       for (let i = 0; i < count; i++) {
         const normY = i / Math.max(1, count - 1);
-        const baseY = h - (h * 0.08 + normY * h * 0.84);
+        const baseY = scaleNormToCanvasY(normY, h);
         const isTonic = (notes[i] - rootMidi) % 12 === 0;
         const isActiveTone =
           st.activePointerId !== null && (i === st.anchorIndex || i === st.activeTargetIndex);
@@ -610,7 +624,7 @@ export function PadPanel({
       // 7. Active Sacred Cymatic Mandala & Pitch-Bend Tether
       if (st.glowAlpha > 0.02 && count > 0) {
         const anchorNorm = st.anchorIndex / Math.max(1, count - 1);
-        const anchorPy = h - (h * 0.08 + anchorNorm * h * 0.84);
+        const anchorPy = scaleNormToCanvasY(anchorNorm, h);
 
         ctx.strokeStyle = `rgba(255, 236, 178, ${st.glowAlpha * 0.5})`;
         ctx.lineWidth = 1.4 * dpr;

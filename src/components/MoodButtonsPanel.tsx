@@ -12,15 +12,15 @@ const DiamondSection = styled.section`
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: clamp(6px, 1.4vh, 12px);
-  padding: 4px 6px 6px;
+  gap: clamp(5px, 1.4vw, 10px);
+  padding: 2px 6px 4px;
 `;
 
 const DiamondRow = styled.div`
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: clamp(8px, 2.4vw, 24px);
+  gap: clamp(5px, 1.4vw, 14px);
   width: 100%;
   flex: 1 1 0;
   min-height: 0;

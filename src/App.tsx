@@ -93,11 +93,11 @@ const BoardLayout = styled.main`
   min-height: 0;
   display: grid;
   grid-template-columns: 1fr 1fr;
-  grid-template-rows: 1.45fr 1fr;
+  grid-template-rows: 1.75fr 1fr;
   gap: 6px;
 
   @media (orientation: portrait) and (max-width: 720px) {
-    grid-template-rows: 1.35fr 1fr;
+    grid-template-rows: 1.95fr 1fr;
   }
 `;
 
