@@ -26,15 +26,18 @@ const DiamondRow = styled.div`
   min-height: 0;
 `;
 
+/**
+ * Recessed antique brass bezel housing a deep 3D cabochon gemstone.
+ */
 const OvalStoneButton = styled.button`
   position: relative;
   overflow: hidden;
   appearance: none;
-  border: 1.5px solid rgba(214, 170, 92, 0.5);
+  border: 2px solid rgba(196, 152, 78, 0.72);
   border-radius: 999px;
-  width: clamp(92px, 26vw, 178px);
+  width: clamp(94px, 26vw, 180px);
   height: 100%;
-  max-height: 62px;
+  max-height: 60px;
   min-height: 36px;
   padding: 4px 12px;
   cursor: pointer;
@@ -43,69 +46,90 @@ const OvalStoneButton = styled.button`
   align-items: center;
   justify-content: center;
   gap: 6px;
-  color: var(--ivory-text);
+  color: #f4e7cd;
   font-family: inherit;
-  background: radial-gradient(ellipse at 50% 30%, rgba(52, 22, 18, 0.9), rgba(18, 6, 7, 0.96) 76%);
+  background-color: #16090a;
   box-shadow:
-    inset 0 2px 3px rgba(255, 228, 176, 0.16),
-    inset 0 -4px 10px rgba(0, 0, 0, 0.78),
-    0 4px 12px rgba(0, 0, 0, 0.6);
+    /* Carved dark wood socket & outer depth */
+    0 5px 12px rgba(0, 0, 0, 0.82),
+    0 1px 0 rgba(255, 224, 168, 0.2),
+    /* Beveled antique gold inner bezel */ inset 0 2px 3px rgba(255, 236, 198, 0.28),
+    inset 0 -7px 14px rgba(0, 0, 0, 0.78),
+    inset 0 0 0 1px rgba(40, 20, 8, 0.85);
   transition:
     transform 0.08s ease,
-    border-color 0.22s ease,
-    box-shadow 0.22s ease;
+    border-color 0.24s ease,
+    box-shadow 0.24s ease;
 
   &:active {
-    transform: scale(0.95);
+    transform: translateY(1px) scale(0.96);
+    box-shadow:
+      0 2px 6px rgba(0, 0, 0, 0.85),
+      inset 0 2px 5px rgba(0, 0, 0, 0.72),
+      inset 0 -4px 10px rgba(0, 0, 0, 0.78);
   }
 
   &[data-mood='blue'][data-active='true'] {
-    border-color: rgba(74, 198, 255, 0.92);
+    border-color: rgba(118, 206, 255, 0.88);
     box-shadow:
-      0 0 18px rgba(44, 174, 255, 0.45),
-      inset 0 0 14px rgba(44, 174, 255, 0.3);
+      0 5px 14px rgba(0, 0, 0, 0.82),
+      0 0 22px rgba(44, 174, 255, 0.42),
+      inset 0 2px 4px rgba(200, 240, 255, 0.36),
+      inset 0 -7px 14px rgba(4, 18, 42, 0.76);
   }
 
   &[data-mood='green'][data-active='true'] {
-    border-color: rgba(66, 232, 152, 0.92);
+    border-color: rgba(114, 238, 176, 0.88);
     box-shadow:
-      0 0 18px rgba(40, 220, 140, 0.45),
-      inset 0 0 14px rgba(40, 220, 140, 0.3);
+      0 5px 14px rgba(0, 0, 0, 0.82),
+      0 0 22px rgba(40, 220, 140, 0.42),
+      inset 0 2px 4px rgba(200, 255, 228, 0.36),
+      inset 0 -7px 14px rgba(4, 34, 20, 0.76);
   }
 
   &[data-mood='purple'][data-active='true'] {
-    border-color: rgba(188, 108, 255, 0.92);
+    border-color: rgba(202, 142, 255, 0.88);
     box-shadow:
-      0 0 18px rgba(165, 82, 255, 0.45),
-      inset 0 0 14px rgba(165, 82, 255, 0.3);
+      0 5px 14px rgba(0, 0, 0, 0.82),
+      0 0 22px rgba(165, 82, 255, 0.42),
+      inset 0 2px 4px rgba(235, 210, 255, 0.36),
+      inset 0 -7px 14px rgba(24, 6, 46, 0.76);
   }
 
   &[data-mood='red'][data-active='true'] {
-    border-color: rgba(255, 92, 106, 0.92);
+    border-color: rgba(255, 134, 142, 0.88);
     box-shadow:
-      0 0 18px rgba(255, 59, 78, 0.45),
-      inset 0 0 14px rgba(255, 59, 78, 0.3);
+      0 5px 14px rgba(0, 0, 0, 0.82),
+      0 0 22px rgba(255, 59, 78, 0.42),
+      inset 0 2px 4px rgba(255, 214, 216, 0.36),
+      inset 0 -7px 14px rgba(48, 4, 10, 0.76);
   }
 
   &[data-mood='amber'][data-active='true'] {
-    border-color: rgba(255, 196, 78, 0.92);
+    border-color: rgba(255, 216, 118, 0.9);
     box-shadow:
-      0 0 18px rgba(255, 182, 56, 0.45),
-      inset 0 0 14px rgba(255, 182, 56, 0.3);
+      0 5px 14px rgba(0, 0, 0, 0.82),
+      0 0 22px rgba(255, 182, 56, 0.42),
+      inset 0 2px 4px rgba(255, 244, 204, 0.38),
+      inset 0 -7px 14px rgba(46, 24, 2, 0.76);
   }
 
   &[data-mood='teal'][data-active='true'] {
-    border-color: rgba(62, 232, 224, 0.92);
+    border-color: rgba(114, 242, 236, 0.88);
     box-shadow:
-      0 0 18px rgba(30, 214, 208, 0.45),
-      inset 0 0 14px rgba(30, 214, 208, 0.3);
+      0 5px 14px rgba(0, 0, 0, 0.82),
+      0 0 22px rgba(30, 214, 208, 0.42),
+      inset 0 2px 4px rgba(206, 255, 252, 0.36),
+      inset 0 -7px 14px rgba(2, 34, 38, 0.76);
   }
 
   &[data-mood='rose'][data-active='true'] {
-    border-color: rgba(255, 120, 196, 0.92);
+    border-color: rgba(255, 158, 216, 0.88);
     box-shadow:
-      0 0 18px rgba(255, 94, 184, 0.45),
-      inset 0 0 14px rgba(255, 94, 184, 0.3);
+      0 5px 14px rgba(0, 0, 0, 0.82),
+      0 0 22px rgba(255, 94, 184, 0.42),
+      inset 0 2px 4px rgba(255, 224, 242, 0.36),
+      inset 0 -7px 14px rgba(48, 6, 30, 0.76);
   }
 
   @media (max-height: 460px) {
@@ -115,79 +139,109 @@ const OvalStoneButton = styled.button`
   }
 `;
 
-const OvalGemGlow = styled.span`
+/**
+ * Deep mineral cabochon body with subsurface internal glow (rich stone, not plastic).
+ */
+const MineralBody = styled.span`
   position: absolute;
   inset: 0;
-  opacity: 0.24;
   pointer-events: none;
+  opacity: 0.78;
   transition: opacity 0.25s ease;
 
   &[data-active='true'] {
-    opacity: 0.62;
+    opacity: 1;
   }
 
   &[data-mood='blue'] {
     background: radial-gradient(
-      ellipse at 50% 45%,
-      #32b4ff 0%,
-      rgba(24, 112, 210, 0.35) 58%,
-      transparent 88%
+      ellipse at 50% 68%,
+      rgba(46, 168, 255, 0.68) 0%,
+      rgba(14, 62, 134, 0.82) 52%,
+      rgba(7, 20, 46, 0.96) 100%
     );
   }
 
   &[data-mood='green'] {
     background: radial-gradient(
-      ellipse at 50% 45%,
-      #34eb99 0%,
-      rgba(16, 165, 98, 0.35) 58%,
-      transparent 88%
+      ellipse at 50% 68%,
+      rgba(44, 208, 132, 0.65) 0%,
+      rgba(12, 92, 58, 0.82) 52%,
+      rgba(6, 28, 18, 0.96) 100%
     );
   }
 
   &[data-mood='purple'] {
     background: radial-gradient(
-      ellipse at 50% 45%,
-      #be6aff 0%,
-      rgba(128, 42, 220, 0.35) 58%,
-      transparent 88%
+      ellipse at 50% 68%,
+      rgba(168, 92, 255, 0.68) 0%,
+      rgba(74, 26, 138, 0.84) 52%,
+      rgba(22, 7, 42, 0.96) 100%
     );
   }
 
   &[data-mood='red'] {
     background: radial-gradient(
-      ellipse at 50% 45%,
-      #ff4b5c 0%,
-      rgba(210, 32, 48, 0.35) 58%,
-      transparent 88%
+      ellipse at 50% 68%,
+      rgba(235, 58, 72, 0.68) 0%,
+      rgba(122, 16, 28, 0.84) 52%,
+      rgba(38, 5, 10, 0.96) 100%
     );
   }
 
   &[data-mood='amber'] {
     background: radial-gradient(
-      ellipse at 50% 45%,
-      #ffc148 0%,
-      rgba(214, 128, 18, 0.35) 58%,
-      transparent 88%
+      ellipse at 50% 68%,
+      rgba(245, 174, 48, 0.68) 0%,
+      rgba(132, 72, 12, 0.84) 52%,
+      rgba(40, 18, 4, 0.96) 100%
     );
   }
 
   &[data-mood='teal'] {
     background: radial-gradient(
-      ellipse at 50% 45%,
-      #2ceae2 0%,
-      rgba(14, 152, 158, 0.35) 58%,
-      transparent 88%
+      ellipse at 50% 68%,
+      rgba(36, 208, 204, 0.65) 0%,
+      rgba(10, 94, 102, 0.84) 52%,
+      rgba(5, 28, 34, 0.96) 100%
     );
   }
 
   &[data-mood='rose'] {
     background: radial-gradient(
-      ellipse at 50% 45%,
-      #ff70c0 0%,
-      rgba(196, 36, 128, 0.35) 58%,
-      transparent 88%
+      ellipse at 50% 68%,
+      rgba(240, 96, 182, 0.68) 0%,
+      rgba(126, 24, 86, 0.84) 52%,
+      rgba(38, 6, 26, 0.96) 100%
     );
   }
+`;
+
+/**
+ * Subtle cut-gemstone internal facet planes & soft stone rim sheen (avoids candy/plastic glare).
+ */
+const CrystalFacets = styled.span`
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  background:
+    linear-gradient(
+      148deg,
+      rgba(255, 246, 224, 0.14) 0%,
+      rgba(255, 246, 224, 0.04) 28%,
+      transparent 44%,
+      rgba(0, 0, 0, 0.24) 72%,
+      rgba(255, 232, 186, 0.09) 100%
+    ),
+    conic-gradient(
+      from 25deg at 50% 50%,
+      rgba(255, 255, 255, 0.07) 0deg 40deg,
+      transparent 40deg 115deg,
+      rgba(0, 0, 0, 0.16) 115deg 190deg,
+      rgba(255, 255, 255, 0.06) 190deg 250deg,
+      transparent 250deg 360deg
+    );
 `;
 
 const PulseFlash = styled.span`
@@ -196,7 +250,7 @@ const PulseFlash = styled.span`
   border-radius: inherit;
   pointer-events: none;
   opacity: 0;
-  background: radial-gradient(circle at center, rgba(255, 250, 235, 0.55), transparent 70%);
+  background: radial-gradient(circle at center, rgba(255, 250, 235, 0.5), transparent 70%);
 
   &[data-pulsing='true'] {
     animation: oval-stone-pulse 0.38s ease-out;
@@ -204,13 +258,13 @@ const PulseFlash = styled.span`
 
   @keyframes oval-stone-pulse {
     from {
-      opacity: 0.9;
+      opacity: 0.85;
       transform: scale(0.84);
     }
 
     to {
       opacity: 0;
-      transform: scale(1.22);
+      transform: scale(1.2);
     }
   }
 `;
@@ -218,52 +272,47 @@ const PulseFlash = styled.span`
 const StoneRune = styled.span`
   position: relative;
   z-index: 1;
-  font-size: clamp(0.85rem, 2vw, 1.15rem);
+  font-size: clamp(0.85rem, 2vw, 1.12rem);
   line-height: 1;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
 
   &[data-mood='blue'] {
-    color: #56c8ff;
-    text-shadow: 0 0 8px rgba(44, 174, 255, 0.85);
+    color: #8ad8ff;
   }
 
   &[data-mood='green'] {
-    color: #52f0a8;
-    text-shadow: 0 0 8px rgba(40, 220, 140, 0.85);
+    color: #84f5c2;
   }
 
   &[data-mood='purple'] {
-    color: #cc84ff;
-    text-shadow: 0 0 8px rgba(165, 82, 255, 0.85);
+    color: #dbb0ff;
   }
 
   &[data-mood='red'] {
-    color: #ff6b78;
-    text-shadow: 0 0 8px rgba(255, 59, 78, 0.85);
+    color: #ff949e;
   }
 
   &[data-mood='amber'] {
-    color: #ffd066;
-    text-shadow: 0 0 8px rgba(255, 182, 56, 0.85);
+    color: #ffe08a;
   }
 
   &[data-mood='teal'] {
-    color: #5ef5ee;
-    text-shadow: 0 0 8px rgba(30, 214, 208, 0.85);
+    color: #8cf7f2;
   }
 
   &[data-mood='rose'] {
-    color: #ff8cd0;
-    text-shadow: 0 0 8px rgba(255, 94, 184, 0.85);
+    color: #ffb0e0;
   }
 `;
 
 const StoneLabel = styled.span`
   position: relative;
   z-index: 1;
-  font-size: clamp(0.64rem, 1.55vw, 0.86rem);
+  font-size: clamp(0.64rem, 1.55vw, 0.84rem);
   letter-spacing: 0.08em;
   text-transform: uppercase;
   white-space: nowrap;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.92);
 `;
 
 export interface MoodButtonsPanelProps {
@@ -304,7 +353,8 @@ export function MoodButtonsPanel({ activeMood, onSelectMood }: MoodButtonsPanelP
                   handlePress(moodKey);
                 }}
               >
-                <OvalGemGlow data-mood={moodKey} data-active={isActive ? 'true' : 'false'} />
+                <MineralBody data-mood={moodKey} data-active={isActive ? 'true' : 'false'} />
+                <CrystalFacets />
                 <PulseFlash
                   key={isPulsing ? pulseState.seq : 0}
                   data-pulsing={isPulsing ? 'true' : 'false'}

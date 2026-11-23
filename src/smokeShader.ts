@@ -78,21 +78,21 @@ void main() {
 
   float smoke = fbm(p + (1.35 + uTurbulence * 0.9) * r - vec2(0.0, uDrift * 0.32));
 
-  float cloudFloor = mix(0.42, 0.20, uDensity);
-  float wisps = smoothstep(cloudFloor, 0.86, smoke * 0.86 + length(q) * 0.18);
-  float filament = smoothstep(0.46, 0.78, smoke) - smoothstep(0.72, 0.94, smoke) * 0.4;
+  float cloudFloor = mix(0.46, 0.28, uDensity);
+  float wisps = smoothstep(cloudFloor, 0.88, smoke * 0.86 + length(q) * 0.18);
+  float filament = smoothstep(0.48, 0.80, smoke) - smoothstep(0.74, 0.94, smoke) * 0.4;
 
   // Subtle localized glow near active melody pad touch
   vec2 padUv = vec2(0.52 + uPadPos.x * 0.44, 0.42 + uPadPos.y * 0.52);
   float distPad = length((vUv - padUv) * aspect);
-  float padGlow = exp(-distPad * 3.6) * uPadActive * (0.22 + uTurbulence * 0.38);
+  float padGlow = exp(-distPad * 3.6) * uPadActive * (0.18 + uTurbulence * 0.32);
 
   vec3 col = mix(uColorA, uColorB, clamp(r.y * 1.1 + filament * 0.45, 0.0, 1.0));
-  col += uColorB * filament * (0.26 + uDensity * 0.55 + uTurbulence * 0.5);
-  col += uColorB * padGlow * 0.55;
+  col += uColorB * filament * (0.24 + uDensity * 0.48 + uTurbulence * 0.45);
+  col += uColorB * padGlow * 0.50;
 
-  float baseAlpha = (0.12 + uDensity * 0.28 + uTurbulence * 0.12) * wisps;
-  float alpha = clamp(baseAlpha + padGlow * 0.16, 0.0, 0.56);
+  float baseAlpha = (0.09 + uDensity * 0.21 + uTurbulence * 0.09) * wisps;
+  float alpha = clamp(baseAlpha + padGlow * 0.12, 0.0, 0.42);
 
   gl_FragColor = vec4(col * alpha, alpha);
 }

@@ -4,6 +4,7 @@ import woodGrainUrl from './assets/wood-grain.jpg';
 import { AudioEngine } from './audioEngine';
 import { MoodButtonsPanel } from './components/MoodButtonsPanel';
 import { PadPanel } from './components/PadPanel';
+import { ScaleGuideModal } from './components/ScaleGuideModal';
 import { SmokeOverlay } from './components/SmokeOverlay';
 import { ZitherPanel } from './components/ZitherPanel';
 import {
@@ -79,10 +80,6 @@ const PlaqueGlyph = styled.span`
   text-shadow: 0 0 10px rgba(var(--aura-rgb), 0.72);
 `;
 
-const PlaqueScale = styled.span`
-  color: var(--ivory-text);
-`;
-
 const PlaqueMood = styled.span`
   font-size: 0.88em;
   color: var(--brass-light);
@@ -102,6 +99,35 @@ const BoardLayout = styled.main`
 
   @media (orientation: portrait) and (max-width: 720px) {
     grid-template-rows: 1.35fr 1fr;
+  }
+`;
+
+const HelpButton = styled.button`
+  position: fixed;
+  left: max(10px, env(safe-area-inset-left));
+  bottom: max(10px, env(safe-area-inset-bottom));
+  z-index: 40;
+  appearance: none;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: 1.5px solid rgba(214, 170, 92, 0.62);
+  background: radial-gradient(circle at 38% 32%, rgba(62, 22, 18, 0.94), rgba(20, 6, 7, 0.96));
+  color: var(--brass-light);
+  font-family: inherit;
+  font-size: 0.95rem;
+  font-weight: 700;
+  cursor: pointer;
+  touch-action: manipulation;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow:
+    0 3px 10px rgba(0, 0, 0, 0.72),
+    inset 0 1px 2px rgba(255, 228, 178, 0.22);
+
+  &:active {
+    transform: scale(0.94);
   }
 `;
 
@@ -174,6 +200,7 @@ export function App() {
   const [rootMidi, setRootMidi] = useState(38);
   const [moodKey, setMoodKey] = useState<MoodKey>('blue');
   const [audioUnlocked, setAudioUnlocked] = useState(false);
+  const [guideOpen, setGuideOpen] = useState(false);
 
   const mood = MOODS[moodKey];
   const aura = useMemo(() => getKeyAuraColor(rootMidi, moodKey), [rootMidi, moodKey]);
@@ -253,8 +280,6 @@ export function App() {
           <PlaqueReadout>
             <PlaqueGlyph data-testid="key-badge">{getPitchGlyph(rootMidi)}</PlaqueGlyph>
             <PlaqueSep>·</PlaqueSep>
-            <PlaqueScale data-testid="scale-badge">{mood.scaleName}</PlaqueScale>
-            <PlaqueSep>·</PlaqueSep>
             <PlaqueMood data-testid="mood-badge">
               {mood.rune} {mood.label.toUpperCase()}
             </PlaqueMood>
@@ -279,6 +304,17 @@ export function App() {
           <MoodButtonsPanel activeMood={moodKey} onSelectMood={handleSelectMood} />
         </BoardLayout>
       </WoodBoard>
+
+      <HelpButton
+        type="button"
+        aria-label="Open scale guide"
+        data-testid="scale-guide-btn"
+        onClick={() => setGuideOpen(true)}
+      >
+        ?
+      </HelpButton>
+
+      <ScaleGuideModal open={guideOpen} activeMood={moodKey} onClose={() => setGuideOpen(false)} />
 
       <AudioUnlockOverlay
         role="button"
