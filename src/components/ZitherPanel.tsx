@@ -303,8 +303,13 @@ export function ZitherPanel({ tunings, auraRgb, auraHex, onPluck }: ZitherPanelP
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const stringsRef = useRef<ZitherStringVisual[]>([]);
   const pointersRef = useRef<Map<number, PointerState>>(new Map());
-  const auraRef = useRef<{ rgb: [number, number, number]; hex: string }>({
-    rgb: [76, 240, 255],
+  const auraRef = useRef<{
+    currentRgb: [number, number, number];
+    targetRgb: [number, number, number];
+    hex: string;
+  }>({
+    currentRgb: [76, 240, 255],
+    targetRgb: [76, 240, 255],
     hex: '#2caeff',
   });
   const flameStateRef = useRef({
@@ -319,14 +324,13 @@ export function ZitherPanel({ tunings, auraRgb, auraHex, onPluck }: ZitherPanelP
   onPluckRef.current = onPluck;
 
   useEffect(() => {
-    auraRef.current = {
-      rgb: [
-        Math.round(auraRgb[0] * 255),
-        Math.round(auraRgb[1] * 255),
-        Math.round(auraRgb[2] * 255),
-      ],
-      hex: auraHex,
-    };
+    auraRef.current.targetRgb = [
+      Math.round(auraRgb[0] * 255),
+      Math.round(auraRgb[1] * 255),
+      Math.round(auraRgb[2] * 255),
+    ];
+
+    auraRef.current.hex = auraHex;
 
     if (stringsRef.current.length !== tunings.length) {
       stringsRef.current = tunings.map((t) => ({
@@ -489,7 +493,19 @@ export function ZitherPanel({ tunings, auraRgb, auraHex, onPluck }: ZitherPanelP
       const w = canvas.width;
       const h = canvas.height;
       const dpr = Math.min(window.devicePixelRatio || 1, 2);
-      const [ar, ag, ab] = auraRef.current.rgb;
+      const colorLerp = Math.min(1, dtSec * 2.6);
+
+      for (let c = 0; c < 3; c++) {
+        auraRef.current.currentRgb[c] +=
+          (auraRef.current.targetRgb[c] - auraRef.current.currentRgb[c]) * colorLerp;
+      }
+
+      const smoothRgb: [number, number, number] = [
+        Math.round(auraRef.current.currentRgb[0]),
+        Math.round(auraRef.current.currentRgb[1]),
+        Math.round(auraRef.current.currentRgb[2]),
+      ];
+      const [ar, ag, ab] = smoothRgb;
       const bounds = getBoardBounds(w, h);
 
       // Update flame (bottom 3 strings) & mystical eye (upper 5 strings) with slow, gradual buildup
@@ -557,7 +573,7 @@ export function ZitherPanel({ tunings, auraRgb, auraHex, onPluck }: ZitherPanelP
         fs.smoothFlame,
         fs.eyeOpenness,
         fs.time,
-        auraRef.current.rgb,
+        smoothRgb,
         dpr,
       );
 
