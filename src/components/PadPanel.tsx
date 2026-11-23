@@ -21,12 +21,11 @@ const PadWell = styled.div`
   height: 100%;
   border-radius: 14px;
   overflow: hidden;
-  background: radial-gradient(circle at 50% 50%, rgba(24, 9, 11, 0.9), rgba(8, 3, 5, 0.96));
-  border: 1.5px solid rgba(214, 170, 92, 0.48);
+  background: radial-gradient(circle at 50% 50%, rgba(22, 8, 10, 0.9), rgba(7, 2, 4, 0.96));
+  border: 1px solid rgba(0, 0, 0, 0.65);
   box-shadow:
-    inset 0 6px 22px rgba(0, 0, 0, 0.9),
-    inset 0 0 32px rgba(var(--aura-rgb), 0.1),
-    0 1px 0 rgba(255, 220, 160, 0.14);
+    inset 0 6px 22px rgba(0, 0, 0, 0.92),
+    inset 0 0 32px rgba(var(--aura-rgb), 0.08);
 `;
 
 const PadCanvas = styled.canvas`
@@ -58,6 +57,44 @@ export interface PadPanelProps {
   onPadUp: () => void;
 }
 
+function drawRipplingRing(
+  ctx: CanvasRenderingContext2D,
+  cx: number,
+  cy: number,
+  baseRadius: number,
+  timbre: number,
+  volume: number,
+  ripplePhase: number,
+  phaseSign: number,
+  strokeStyle: string,
+  lineWidth: number,
+  dpr: number,
+) {
+  const steps = 84;
+  const harmonicA = 4 + Math.round(timbre * 5);
+  const harmonicB = harmonicA + 3;
+  const amp = (1.2 + volume * 9.5) * dpr;
+
+  ctx.strokeStyle = strokeStyle;
+  ctx.lineWidth = lineWidth;
+  ctx.beginPath();
+
+  for (let i = 0; i <= steps; i++) {
+    const theta = (i / steps) * Math.PI * 2;
+    const wave1 = Math.sin(harmonicA * theta + ripplePhase * phaseSign) * amp;
+    const wave2 = Math.cos(harmonicB * theta - ripplePhase * 1.45 * phaseSign) * amp * 0.42;
+    const r = baseRadius + wave1 + wave2;
+    const px = cx + Math.cos(theta) * r;
+    const py = cy + Math.sin(theta) * r;
+
+    if (i === 0) ctx.moveTo(px, py);
+    else ctx.lineTo(px, py);
+  }
+
+  ctx.closePath();
+  ctx.stroke();
+}
+
 function drawSacredMandala(
   ctx: CanvasRenderingContext2D,
   cx: number,
@@ -71,7 +108,6 @@ function drawSacredMandala(
   dpr: number,
 ) {
   const [ar, ag, ab] = auraRgb;
-  // Petals & Lissajous harmonic ratio evolve continuously from left (whine) to right (whistle)
   const petals = 3 + Math.round(morphX * 7);
   const innerHarmonic = 2 + morphX * 4;
   const spin = phase * (0.7 + pitchNormY * 1.1);
@@ -79,7 +115,6 @@ function drawSacredMandala(
   ctx.save();
   ctx.translate(cx, cy);
 
-  // Outer luminous aura
   const auraGrad = ctx.createRadialGradient(0, 0, 2 * dpr, 0, 0, baseRadius * 1.65);
 
   auraGrad.addColorStop(0, `rgba(255, 252, 240, ${alpha * 0.92})`);
@@ -91,7 +126,6 @@ function drawSacredMandala(
   ctx.arc(0, 0, baseRadius * 1.65, 0, Math.PI * 2);
   ctx.fill();
 
-  // Primary cymatic rose curve reflecting timbre (X) & pitch (Y)
   ctx.strokeStyle = `rgba(255, 246, 214, ${alpha * 0.85})`;
   ctx.lineWidth = 1.35 * dpr;
   ctx.beginPath();
@@ -112,7 +146,6 @@ function drawSacredMandala(
   ctx.closePath();
   ctx.stroke();
 
-  // Counter-rotating inner Lissajous filament
   ctx.strokeStyle = `rgba(${ar}, ${ag}, ${ab}, ${alpha * 0.72})`;
   ctx.lineWidth = 1.0 * dpr;
   ctx.beginPath();
@@ -130,7 +163,6 @@ function drawSacredMandala(
   ctx.closePath();
   ctx.stroke();
 
-  // Fine engraved astrolabe ring
   ctx.strokeStyle = `rgba(232, 194, 118, ${alpha * 0.5})`;
   ctx.lineWidth = 0.9 * dpr;
   ctx.setLineDash([2.5 * dpr, 3.5 * dpr]);
@@ -170,6 +202,10 @@ export function PadPanel({
     glowAlpha: 0,
     sustainGlow: 0,
     vibratoGlow: 0,
+    smoothTimbre: 0.5,
+    smoothVolume: 0,
+    ringOrbitAngle: 0,
+    ringRipplePhase: 0,
     phase: 0,
     trail: [] as TrailPoint[],
     ripples: [] as Ripple[],
@@ -341,9 +377,23 @@ export function PadPanel({
         st.vibratoGlow *= Math.pow(0.25, dtSec);
       }
 
+      // Smoothly track timbre (X) and expressive volume (sustain + vibrato) for the two rings
+      const targetTimbre = st.activePointerId !== null ? st.currentX : 0.5;
+      const targetVol =
+        st.activePointerId !== null
+          ? Math.min(1, 0.25 + st.sustainGlow * 0.42 + st.vibratoGlow * 0.38)
+          : 0;
+
+      st.smoothTimbre += (targetTimbre - st.smoothTimbre) * Math.min(1, dtSec * 4.5);
+      st.smoothVolume += (targetVol - st.smoothVolume) * Math.min(1, dtSec * 3.5);
+
+      // Orbit speed around center driven by volume; ripple phase driven by sound energy
+      st.ringOrbitAngle += dtSec * (0.08 + st.smoothVolume * 2.1);
+      st.ringRipplePhase += dtSec * (1.1 + st.smoothVolume * 4.8);
+
       ctx.clearRect(0, 0, w, h);
 
-      // 1. Deep 2D Timbre-Pitch Atmosphere Gradient (Left = low copper whine, Right = luminous whistle)
+      // 1. Deep 2D Timbre-Pitch Atmosphere Gradient
       const bgGrad = ctx.createLinearGradient(0, h, w, 0);
 
       bgGrad.addColorStop(0, 'rgba(92, 16, 18, 0.28)');
@@ -352,14 +402,14 @@ export function PadPanel({
       ctx.fillStyle = bgGrad;
       ctx.fillRect(0, 0, w, h);
 
-      // 2. Engraved Celestial Meridian Arcs (Vertical 2D Timbre Zones: Fundamental -> Overtone -> Whistle)
+      // 2. Engraved Celestial Meridian Arcs
       const arcCenters = [0.22, 0.5, 0.78];
 
       for (let m = 0; m < arcCenters.length; m++) {
         const mx = w * arcCenters[m];
         const curveBend = (m - 1) * w * 0.12;
 
-        ctx.strokeStyle = m === 1 ? 'rgba(224, 180, 102, 0.14)' : `rgba(${ar}, ${ag}, ${ab}, 0.10)`;
+        ctx.strokeStyle = m === 1 ? 'rgba(224, 180, 102, 0.12)' : `rgba(${ar}, ${ag}, ${ab}, 0.09)`;
         ctx.lineWidth = 0.9 * dpr;
         ctx.beginPath();
         ctx.moveTo(mx, h * 0.04);
@@ -367,19 +417,48 @@ export function PadPanel({
         ctx.stroke();
       }
 
-      // Sacred nested vesica-piscis / astrolabe circles in background
+      // 3. Two Dynamic Mystical Rings:
+      //    - Move closer/farther based on timbre (X)
+      //    - Rotate around center based on volume
+      //    - Ripple organically to the sound
       const minDim = Math.min(w, h);
+      const centerX = w * 0.5;
+      const centerY = h * 0.5;
+      const ringRadius = minDim * (0.33 + st.smoothVolume * 0.04);
+      const ringSep = minDim * (0.21 - st.smoothTimbre * 0.16);
+      const ox = Math.cos(st.ringOrbitAngle) * ringSep;
+      const oy = Math.sin(st.ringOrbitAngle) * ringSep;
+      const ringAlpha = 0.16 + st.smoothVolume * 0.36;
 
-      ctx.strokeStyle = 'rgba(218, 174, 96, 0.11)';
-      ctx.lineWidth = 0.9 * dpr;
-      ctx.beginPath();
-      ctx.arc(w * 0.36, h * 0.5, minDim * 0.36, 0, Math.PI * 2);
-      ctx.stroke();
-      ctx.beginPath();
-      ctx.arc(w * 0.64, h * 0.5, minDim * 0.36, 0, Math.PI * 2);
-      ctx.stroke();
+      drawRipplingRing(
+        ctx,
+        centerX - ox,
+        centerY - oy,
+        ringRadius,
+        st.smoothTimbre,
+        st.smoothVolume,
+        st.ringRipplePhase,
+        1,
+        `rgba(224, 178, 98, ${ringAlpha})`,
+        (1.0 + st.smoothVolume * 0.7) * dpr,
+        dpr,
+      );
 
-      // 3. 2D Standing-Wave Harmonic Contours (Y = Pitch, X = Timbre Harmonic Complexity)
+      drawRipplingRing(
+        ctx,
+        centerX + ox,
+        centerY + oy,
+        ringRadius,
+        st.smoothTimbre,
+        st.smoothVolume,
+        st.ringRipplePhase,
+        -1,
+        `rgba(${ar}, ${ag}, ${ab}, ${ringAlpha})`,
+        (1.0 + st.smoothVolume * 0.7) * dpr,
+        dpr,
+      );
+
+      // 4. 2D Standing-Wave Harmonic Contours
       const count = notes.length;
       const fontSize = Math.max(9, Math.round(10 * dpr));
 
@@ -401,7 +480,6 @@ export function PadPanel({
         const endX = w * 0.95;
         const spanX = endX - startX;
 
-        // Primary harmonic wave: broad low-frequency wave on left, splitting into finer overtones on right
         ctx.strokeStyle = isActiveTone
           ? `rgba(${ar}, ${ag}, ${ab}, 0.82)`
           : isTonic
@@ -414,7 +492,6 @@ export function PadPanel({
         for (let s = 0; s <= segs; s++) {
           const u = s / segs;
           const x = startX + u * spanX;
-          // Spatial frequency increases smoothly from left (whine) to right (whistle)
           const spatialFreq = 1.4 + u * u * 5.2;
           const baseAmp = (isTonic ? 4.4 : 2.6) * dpr * (1 - normY * 0.32);
           const harmonicWave =
@@ -422,7 +499,6 @@ export function PadPanel({
             baseAmp *
             (0.45 + 0.55 * Math.sin(u * Math.PI));
 
-          // Magnetic warp when thumb is playing nearby
           let warp = 0;
 
           if (st.glowAlpha > 0.02) {
@@ -441,7 +517,6 @@ export function PadPanel({
 
         ctx.stroke();
 
-        // Secondary counter-phase overtone braid on tonic or active degrees (fades in toward right = whistle)
         if (isTonic || isActiveTone) {
           ctx.strokeStyle = isActiveTone
             ? `rgba(255, 246, 212, 0.48)`
@@ -466,7 +541,6 @@ export function PadPanel({
 
           ctx.stroke();
 
-          // Sacred diamond constellation nodes at 2D harmonic intersections
           for (const nxFrac of arcCenters) {
             const nx = startX + nxFrac * spanX;
             const nodeR = (isActiveTone ? 3.2 : 2.1) * dpr;
@@ -484,7 +558,6 @@ export function PadPanel({
             ctx.fill();
           }
 
-          // Etched Ancient Greek pitch glyph on left margin
           ctx.fillStyle = isActiveTone
             ? `rgba(${ar}, ${ag}, ${ab}, 0.98)`
             : 'rgba(232, 194, 126, 0.68)';
@@ -494,7 +567,7 @@ export function PadPanel({
         }
       }
 
-      // 4. Expanding Cymatic Ripples on Press & Neighbor Bend Lock
+      // 5. Expanding Cymatic Ripples
       for (let i = st.ripples.length - 1; i >= 0; i--) {
         const rp = st.ripples[i];
 
@@ -513,7 +586,7 @@ export function PadPanel({
         ctx.stroke();
       }
 
-      // 5. Luminous Ribbon Trail
+      // 6. Luminous Ribbon Trail
       for (let i = st.trail.length - 1; i >= 0; i--) {
         st.trail[i].life -= dtSec * 2.0;
         if (st.trail[i].life <= 0) st.trail.splice(i, 1);
@@ -534,12 +607,11 @@ export function PadPanel({
         }
       }
 
-      // 6. Active Sacred Cymatic Mandala & Pitch-Bend Tether under Thumb
+      // 7. Active Sacred Cymatic Mandala & Pitch-Bend Tether
       if (st.glowAlpha > 0.02 && count > 0) {
         const anchorNorm = st.anchorIndex / Math.max(1, count - 1);
         const anchorPy = h - (h * 0.08 + anchorNorm * h * 0.84);
 
-        // Braided harmonic bend tether from anchored scale tone to thumb
         ctx.strokeStyle = `rgba(255, 236, 178, ${st.glowAlpha * 0.5})`;
         ctx.lineWidth = 1.4 * dpr;
         ctx.setLineDash([3 * dpr, 4 * dpr]);

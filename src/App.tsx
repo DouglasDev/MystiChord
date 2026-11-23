@@ -42,12 +42,11 @@ const TopPlaque = styled.header`
   padding: 4px 16px;
   margin: 0 auto;
   border-radius: 999px;
-  background: linear-gradient(180deg, rgba(46, 14, 14, 0.88), rgba(20, 6, 7, 0.94));
-  border: 1px solid rgba(214, 170, 92, 0.48);
+  background: linear-gradient(180deg, rgba(28, 7, 8, 0.84), rgba(14, 3, 4, 0.92));
+  border: 1px solid rgba(0, 0, 0, 0.65);
   box-shadow:
-    0 2px 10px rgba(0, 0, 0, 0.65),
-    inset 0 1px 0 rgba(255, 224, 160, 0.18),
-    0 0 16px rgba(var(--aura-rgb), 0.16);
+    0 3px 12px rgba(0, 0, 0, 0.7),
+    0 0 16px rgba(var(--aura-rgb), 0.14);
 
   @media (max-height: 450px) {
     padding: 2px 12px;
@@ -111,8 +110,8 @@ const HelpButton = styled.button`
   width: 34px;
   height: 34px;
   border-radius: 50%;
-  border: 1.5px solid rgba(214, 170, 92, 0.62);
-  background: radial-gradient(circle at 38% 32%, rgba(62, 22, 18, 0.94), rgba(20, 6, 7, 0.96));
+  border: 1px solid rgba(0, 0, 0, 0.72);
+  background: radial-gradient(circle at 38% 32%, rgba(42, 12, 12, 0.92), rgba(14, 3, 4, 0.96));
   color: var(--brass-light);
   font-family: inherit;
   font-size: 0.95rem;
@@ -123,8 +122,8 @@ const HelpButton = styled.button`
   align-items: center;
   justify-content: center;
   box-shadow:
-    0 3px 10px rgba(0, 0, 0, 0.72),
-    inset 0 1px 2px rgba(255, 228, 178, 0.22);
+    0 4px 10px rgba(0, 0, 0, 0.78),
+    inset 0 1px 2px rgba(255, 255, 255, 0.12);
 
   &:active {
     transform: scale(0.94);

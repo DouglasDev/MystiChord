@@ -305,9 +305,26 @@ export function computeBoundedBend(
   const direction = clampedSteps >= 0 ? 1 : -1;
   const neighborIndex = Math.max(0, Math.min(maxIdx, anchorIndex + direction));
   const frac = Math.abs(clampedSteps);
-  const curvedFrac = snappedToNeighbor
-    ? 1
-    : 0.82 * frac + 0.18 * (0.5 - 0.5 * Math.cos(Math.PI * frac));
+
+  let curvedFrac: number;
+
+  if (snappedToNeighbor) {
+    curvedFrac = 1;
+  } else if (frac <= 0.07) {
+    // Inner return pocket: locks cleanly onto the original pitch
+    curvedFrac = 0;
+  } else if (frac < 0.28) {
+    // Quarter-step gravity well: smoothly nudges pitch toward original note
+    const t = (frac - 0.07) / 0.21;
+
+    curvedFrac = 0.24 * Math.pow(t, 2.2);
+  } else {
+    // Smooth continuous bend from 0.28 -> 0.92 up to the adjacent scale tone
+    const t = (frac - 0.28) / (0.92 - 0.28);
+    const eased = 0.85 * t + 0.15 * (0.5 - 0.5 * Math.cos(Math.PI * t));
+
+    curvedFrac = 0.24 + 0.76 * Math.min(1, eased);
+  }
 
   const baseMidi = notes[anchorIndex];
   const neighborMidi = notes[neighborIndex];

@@ -88,6 +88,21 @@ test('bounded pitch bend only bends up to 1 scale tone above or below and locks 
 
   assert.equal(atRest.midi, notes[anchor]);
 
+  // Small drift near original note snaps/nudges smoothly back toward original pitch
+  const tinyDrift = computeBoundedBend(anchor, 0.05 / (notes.length - 1), notes);
+
+  assert.equal(tinyDrift.midi, notes[anchor]);
+
+  const quarterStepUp = computeBoundedBend(anchor, 0.2 / (notes.length - 1), notes);
+  const linearQuarterMidi = notes[anchor] + (notes[anchor + 1] - notes[anchor]) * 0.2;
+
+  assert.ok(quarterStepUp.midi > notes[anchor]);
+
+  assert.ok(
+    quarterStepUp.midi < linearQuarterMidi,
+    'quarter-step should nudge toward original pitch',
+  );
+
   // Partial bend upward moves between anchor and anchor + 1
   const halfUp = computeBoundedBend(anchor, 0.5 / (notes.length - 1), notes);
 
