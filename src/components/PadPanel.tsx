@@ -424,11 +424,11 @@ export function PadPanel({
       const minDim = Math.min(w, h);
       const centerX = w * 0.5;
       const centerY = h * 0.5;
-      const ringRadius = minDim * (0.33 + st.smoothVolume * 0.04);
-      const ringSep = minDim * (0.21 - st.smoothTimbre * 0.16);
+      const ringRadius = minDim * (0.23 + st.smoothVolume * 0.028);
+      const ringSep = minDim * (0.15 - st.smoothTimbre * 0.11);
       const ox = Math.cos(st.ringOrbitAngle) * ringSep;
       const oy = Math.sin(st.ringOrbitAngle) * ringSep;
-      const ringAlpha = 0.16 + st.smoothVolume * 0.36;
+      const ringAlpha = 0.17 + st.smoothVolume * 0.14;
 
       drawRipplingRing(
         ctx,
@@ -440,7 +440,7 @@ export function PadPanel({
         st.ringRipplePhase,
         1,
         `rgba(224, 178, 98, ${ringAlpha})`,
-        (1.0 + st.smoothVolume * 0.7) * dpr,
+        (0.85 + st.smoothVolume * 0.35) * dpr,
         dpr,
       );
 
@@ -454,7 +454,7 @@ export function PadPanel({
         st.ringRipplePhase,
         -1,
         `rgba(${ar}, ${ag}, ${ab}, ${ringAlpha})`,
-        (1.0 + st.smoothVolume * 0.7) * dpr,
+        (0.85 + st.smoothVolume * 0.35) * dpr,
         dpr,
       );
 
@@ -462,7 +462,7 @@ export function PadPanel({
       const count = notes.length;
       const fontSize = Math.max(9, Math.round(10 * dpr));
 
-      ctx.font = `600 ${fontSize}px "Cinzel", Georgia, serif`;
+      ctx.font = `600 ${fontSize}px "GFS Neohellenic", "Uncial Antiqua", Georgia, serif`;
       ctx.textBaseline = 'middle';
 
       const touchPx = st.currentX * w;

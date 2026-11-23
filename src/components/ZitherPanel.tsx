@@ -80,37 +80,36 @@ function getBoardBounds(w: number, h: number) {
   return { topY, bottomY, rightX, topLeftX, bottomLeftX, leftAtY };
 }
 
-function drawFlameTongue(
+function drawSoftPlume(
   ctx: CanvasRenderingContext2D,
   cx: number,
-  baseY: number,
-  width: number,
-  height: number,
-  sway: number,
+  cy: number,
+  rx: number,
+  ry: number,
+  r: number,
+  g: number,
+  b: number,
+  alpha: number,
 ) {
+  ctx.save();
+  ctx.translate(cx, cy);
+  ctx.scale(1, ry / Math.max(1, rx));
+
+  const grad = ctx.createRadialGradient(0, 0, rx * 0.08, 0, 0, rx);
+
+  grad.addColorStop(0, `rgba(${r}, ${g}, ${b}, ${alpha})`);
+
+  grad.addColorStop(
+    0.55,
+    `rgba(${Math.round(r * 0.55)}, ${Math.round(g * 0.45)}, ${Math.round(b * 0.55)}, ${alpha * 0.42})`,
+  );
+
+  grad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+  ctx.fillStyle = grad;
   ctx.beginPath();
-  ctx.moveTo(cx, baseY);
-
-  ctx.bezierCurveTo(
-    cx - width,
-    baseY - height * 0.25,
-    cx - width * 0.65 + sway * 0.5,
-    baseY - height * 0.72,
-    cx + sway,
-    baseY - height,
-  );
-
-  ctx.bezierCurveTo(
-    cx + width * 0.65 + sway * 0.5,
-    baseY - height * 0.72,
-    cx + width,
-    baseY - height * 0.25,
-    cx,
-    baseY,
-  );
-
-  ctx.closePath();
+  ctx.arc(0, 0, rx, 0, Math.PI * 2);
   ctx.fill();
+  ctx.restore();
 }
 
 function drawSoundHoleFlameAndEye(
@@ -134,164 +133,108 @@ function drawSoundHoleFlameAndEye(
   // Deep obsidian void inside the hole
   const voidGrad = ctx.createRadialGradient(cx, cy, rInner * 0.08, cx, cy, rInner);
 
-  voidGrad.addColorStop(0, 'rgba(6, 1, 3, 0.98)');
-  voidGrad.addColorStop(1, 'rgba(2, 0, 1, 0.96)');
+  voidGrad.addColorStop(0, 'rgba(5, 1, 2, 0.98)');
+  voidGrad.addColorStop(1, 'rgba(2, 0, 1, 0.97)');
   ctx.fillStyle = voidGrad;
   ctx.fillRect(cx - rInner, cy - rInner, rInner * 2, rInner * 2);
 
-  // Dark flame that gradually appears and brightens when zither is strummed
-  if (flameIntensity > 0.02) {
+  // Subtle smoky dark flame triggered by sustained strumming of the bottom 3 strings
+  if (flameIntensity > 0.015) {
     const f = Math.min(1, flameIntensity);
-    const baseY = cy + rInner * 0.95;
+    const emberR = Math.round(ar * 0.48 + 78);
+    const emberG = Math.round(ag * 0.28 + 18);
+    const emberB = Math.round(ab * 0.42 + 24);
 
-    // Ambient dark ember glow inside the void
-    const emberGrad = ctx.createRadialGradient(cx, cy + rInner * 0.2, 1, cx, cy, rInner);
+    for (let p = 0; p < 5; p++) {
+      const cycle = (time * (0.28 + p * 0.05) + p * 0.21) % 1;
+      const sway = Math.sin(time * (1.2 + p * 0.35) + p * 2.1) * rInner * (0.14 + cycle * 0.16);
+      const py = cy + rInner * (0.72 - cycle * (0.95 + f * 0.55));
+      const rx = rInner * (0.34 + (1 - cycle) * 0.22);
+      const ry = rInner * (0.48 + cycle * 0.38);
+      const fade = Math.sin(cycle * Math.PI);
+      const alpha = f * fade * 0.26;
 
-    emberGrad.addColorStop(
-      0,
-      `rgba(${Math.round(ar * 0.6 + 60)}, ${Math.round(ag * 0.35 + 14)}, ${Math.round(ab * 0.55 + 24)}, ${f * 0.42})`,
-    );
+      drawSoftPlume(ctx, cx + sway, py, rx, ry, emberR, emberG, emberB, alpha);
+    }
 
-    emberGrad.addColorStop(0.65, `rgba(48, 8, 16, ${f * 0.32})`);
-    emberGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
-    ctx.fillStyle = emberGrad;
-    ctx.beginPath();
-    ctx.arc(cx, cy, rInner, 0, Math.PI * 2);
-    ctx.fill();
+    const flicker = 0.85 + 0.15 * Math.sin(time * 3.1) * Math.cos(time * 1.9);
 
-    // Outer dark shadow-flame veil
-    const sway1 = Math.sin(time * 2.6) * rInner * 0.16;
-    const outerH = rInner * (0.65 + f * 1.15);
-    const outerGrad = ctx.createLinearGradient(cx, baseY, cx, baseY - outerH);
-
-    outerGrad.addColorStop(0, `rgba(28, 4, 12, ${0.45 + f * 0.45})`);
-
-    outerGrad.addColorStop(
-      0.55,
-      `rgba(${Math.round(ar * 0.45 + 36)}, ${Math.round(ag * 0.25 + 8)}, ${Math.round(ab * 0.45 + 22)}, ${0.32 + f * 0.52})`,
-    );
-
-    outerGrad.addColorStop(1, 'rgba(18, 2, 8, 0)');
-    ctx.fillStyle = outerGrad;
-    drawFlameTongue(ctx, cx, baseY, rInner * (0.48 + f * 0.22), outerH, sway1);
-
-    // Side dark wisps
-    const swayL = Math.sin(time * 3.4 + 1.4) * rInner * 0.14;
-    const swayR = Math.cos(time * 3.1 + 0.7) * rInner * 0.14;
-
-    ctx.fillStyle = `rgba(${Math.round(ar * 0.5 + 30)}, ${Math.round(ag * 0.28 + 10)}, ${Math.round(ab * 0.5 + 26)}, ${f * 0.42})`;
-
-    drawFlameTongue(
+    drawSoftPlume(
       ctx,
-      cx - rInner * 0.22,
-      baseY,
-      rInner * 0.28,
-      outerH * 0.76,
-      swayL - rInner * 0.08,
+      cx + Math.sin(time * 1.8) * rInner * 0.06,
+      cy + rInner * 0.34,
+      rInner * 0.42,
+      rInner * 0.56,
+      Math.round(ar * 0.55 + 95),
+      Math.round(ag * 0.4 + 42),
+      Math.round(ab * 0.45 + 32),
+      f * 0.3 * flicker,
     );
-
-    drawFlameTongue(
-      ctx,
-      cx + rInner * 0.22,
-      baseY,
-      rInner * 0.28,
-      outerH * 0.74,
-      swayR + rInner * 0.08,
-    );
-
-    // Luminous inner dark-fire core
-    const sway2 = Math.sin(time * 4.1 + 0.6) * rInner * 0.11;
-    const innerH = rInner * (0.42 + f * 0.85);
-    const innerGrad = ctx.createLinearGradient(cx, baseY, cx, baseY - innerH);
-
-    innerGrad.addColorStop(0, `rgba(12, 2, 6, ${0.55 + f * 0.35})`);
-    innerGrad.addColorStop(0.5, `rgba(${ar}, ${ag}, ${ab}, ${f * 0.62})`);
-    innerGrad.addColorStop(0.85, `rgba(255, 224, 152, ${f * f * 0.55})`);
-    innerGrad.addColorStop(1, 'rgba(255, 224, 152, 0)');
-    ctx.fillStyle = innerGrad;
-    drawFlameTongue(ctx, cx, baseY, rInner * (0.26 + f * 0.14), innerH, sway2);
   }
 
-  // Mystical eye that appears within the flame and gradually opens on intense strumming
-  if (eyeOpenness > 0.02) {
+  // Ghostly, dimly luminous mystical eye triggered by sustained strumming of the upper 5 strings
+  if (eyeOpenness > 0.015) {
     const o = Math.min(1, eyeOpenness);
-    const eyeW = rInner * 0.72;
-    const lidOpen = rInner * 0.44 * o;
+    const eyeW = rInner * 0.68;
+    const lidOpen = rInner * 0.4 * o;
 
     ctx.save();
-    // Almond aperture clip
     ctx.beginPath();
     ctx.moveTo(cx - eyeW, cy);
-    ctx.quadraticCurveTo(cx, cy - lidOpen * 1.45, cx + eyeW, cy);
-    ctx.quadraticCurveTo(cx, cy + lidOpen * 1.45, cx - eyeW, cy);
+    ctx.quadraticCurveTo(cx, cy - lidOpen * 1.4, cx + eyeW, cy);
+    ctx.quadraticCurveTo(cx, cy + lidOpen * 1.4, cx - eyeW, cy);
     ctx.closePath();
 
-    // Soft sclera / smoky obsidian-gold eye interior
     const scleraGrad = ctx.createRadialGradient(cx, cy, 1, cx, cy, eyeW);
 
-    scleraGrad.addColorStop(0, `rgba(255, 240, 200, ${o * 0.34})`);
-
-    scleraGrad.addColorStop(
-      0.55,
-      `rgba(${Math.round(ar * 0.45)}, ${Math.round(ag * 0.45)}, ${Math.round(ab * 0.45)}, ${o * 0.48})`,
-    );
-
-    scleraGrad.addColorStop(1, `rgba(8, 2, 4, ${o * 0.9})`);
+    scleraGrad.addColorStop(0, `rgba(${ar}, ${ag}, ${ab}, ${o * 0.16})`);
+    scleraGrad.addColorStop(0.65, `rgba(18, 6, 10, ${o * 0.42})`);
+    scleraGrad.addColorStop(1, `rgba(4, 1, 2, ${o * 0.85})`);
     ctx.fillStyle = scleraGrad;
     ctx.fill();
 
-    // Clip to open eyelids for iris & pupil
     ctx.save();
     ctx.clip();
 
-    const irisR = rInner * 0.34;
-    const irisGrad = ctx.createRadialGradient(cx, cy, irisR * 0.15, cx, cy, irisR);
+    const irisR = rInner * 0.32;
+    const irisGrad = ctx.createRadialGradient(cx, cy, irisR * 0.1, cx, cy, irisR);
 
-    irisGrad.addColorStop(0, `rgba(255, 224, 138, ${o * 0.92})`);
-    irisGrad.addColorStop(0.52, `rgba(${ar}, ${ag}, ${ab}, ${o * 0.88})`);
-    irisGrad.addColorStop(1, `rgba(18, 4, 10, ${o * 0.95})`);
+    irisGrad.addColorStop(0, `rgba(220, 186, 124, ${o * 0.46})`);
+    irisGrad.addColorStop(0.5, `rgba(${ar}, ${ag}, ${ab}, ${o * 0.42})`);
+    irisGrad.addColorStop(1, 'rgba(8, 2, 5, 0)');
     ctx.fillStyle = irisGrad;
     ctx.beginPath();
     ctx.arc(cx, cy, irisR, 0, Math.PI * 2);
     ctx.fill();
 
-    // Subtle iris radial striations
-    ctx.strokeStyle = `rgba(255, 244, 210, ${o * 0.35})`;
-    ctx.lineWidth = 0.75 * dpr;
+    ctx.strokeStyle = `rgba(${ar}, ${ag}, ${ab}, ${o * 0.22})`;
+    ctx.lineWidth = 0.65 * dpr;
 
-    for (let k = 0; k < 12; k++) {
-      const a = (k / 12) * Math.PI * 2 + time * 0.15;
+    for (let k = 0; k < 14; k++) {
+      const a = (k / 14) * Math.PI * 2 + time * 0.08;
 
       ctx.beginPath();
-      ctx.moveTo(cx + Math.cos(a) * irisR * 0.35, cy + Math.sin(a) * irisR * 0.35);
-      ctx.lineTo(cx + Math.cos(a) * irisR * 0.95, cy + Math.sin(a) * irisR * 0.95);
+      ctx.moveTo(cx + Math.cos(a) * irisR * 0.32, cy + Math.sin(a) * irisR * 0.32);
+      ctx.lineTo(cx + Math.cos(a) * irisR * 0.92, cy + Math.sin(a) * irisR * 0.92);
       ctx.stroke();
     }
 
-    // Vertical mystical slit pupil
-    const pupilW = irisR * (0.22 + 0.08 * Math.sin(time * 2.2));
-    const pupilH = irisR * 0.84;
+    const pupilW = irisR * (0.19 + 0.06 * Math.sin(time * 1.6));
+    const pupilH = irisR * 0.82;
 
-    ctx.fillStyle = `rgba(4, 1, 3, ${0.85 + o * 0.15})`;
+    ctx.fillStyle = `rgba(3, 1, 2, ${0.78 + o * 0.18})`;
     ctx.beginPath();
     ctx.ellipse(cx, cy, pupilW, pupilH, 0, 0, Math.PI * 2);
     ctx.fill();
 
-    // Pinpoint starlight reflection
-    ctx.fillStyle = `rgba(255, 253, 244, ${o * 0.92})`;
-    ctx.beginPath();
-    ctx.arc(cx - irisR * 0.22, cy - irisR * 0.22, 1.8 * dpr, 0, Math.PI * 2);
-    ctx.fill();
-
     ctx.restore();
 
-    // Luminous eyelid contour
-    ctx.strokeStyle = `rgba(255, 232, 178, ${o * 0.68})`;
-    ctx.lineWidth = 1.15 * dpr;
+    ctx.strokeStyle = `rgba(218, 184, 128, ${o * 0.32})`;
+    ctx.lineWidth = 0.9 * dpr;
     ctx.beginPath();
     ctx.moveTo(cx - eyeW, cy);
-    ctx.quadraticCurveTo(cx, cy - lidOpen * 1.45, cx + eyeW, cy);
-    ctx.quadraticCurveTo(cx, cy + lidOpen * 1.45, cx - eyeW, cy);
+    ctx.quadraticCurveTo(cx, cy - lidOpen * 1.4, cx + eyeW, cy);
+    ctx.quadraticCurveTo(cx, cy + lidOpen * 1.4, cx - eyeW, cy);
     ctx.closePath();
     ctx.stroke();
 
@@ -310,7 +253,8 @@ export function ZitherPanel({ tunings, auraRgb, auraHex, onPluck }: ZitherPanelP
     hex: '#2caeff',
   });
   const flameStateRef = useRef({
-    strumEnergy: 0,
+    flameEnergy: 0,
+    eyeEnergy: 0,
     smoothFlame: 0,
     eyeOpenness: 0,
     time: 0,
@@ -395,10 +339,17 @@ export function ZitherPanel({ tunings, auraRgb, auraHex, onPluck }: ZitherPanelP
       s.glow = 1.0;
       s.pluckX = normX;
 
-      flameStateRef.current.strumEnergy = Math.min(
-        1.25,
-        flameStateRef.current.strumEnergy + 0.18 * velocity,
-      );
+      if (s.isLowRed) {
+        flameStateRef.current.flameEnergy = Math.min(
+          1.35,
+          flameStateRef.current.flameEnergy + 0.085 * velocity,
+        );
+      } else {
+        flameStateRef.current.eyeEnergy = Math.min(
+          1.35,
+          flameStateRef.current.eyeEnergy + 0.075 * velocity,
+        );
+      }
 
       onPluckRef.current(s, velocity);
     };
@@ -486,17 +437,20 @@ export function ZitherPanel({ tunings, auraRgb, auraHex, onPluck }: ZitherPanelP
       const [ar, ag, ab] = auraRef.current.rgb;
       const bounds = getBoardBounds(w, h);
 
-      // Update flame & mystical eye state
+      // Update flame (bottom 3 strings) & mystical eye (upper 5 strings) with slow, gradual buildup
       const fs = flameStateRef.current;
 
       fs.time += dtSec;
-      fs.strumEnergy = Math.max(0, fs.strumEnergy * Math.pow(0.48, dtSec));
-      const targetFlame = Math.min(1, fs.strumEnergy);
+      fs.flameEnergy = Math.max(0, fs.flameEnergy * Math.pow(0.66, dtSec));
+      fs.eyeEnergy = Math.max(0, fs.eyeEnergy * Math.pow(0.68, dtSec));
 
-      fs.smoothFlame += (targetFlame - fs.smoothFlame) * Math.min(1, dtSec * 3.8);
+      const targetFlame = fs.flameEnergy > 0.34 ? Math.min(1, (fs.flameEnergy - 0.34) / 0.82) : 0;
+      const flameSpeed = targetFlame > fs.smoothFlame ? 0.75 : 0.45;
 
-      const eyeTarget = fs.strumEnergy > 0.55 ? Math.min(1, (fs.strumEnergy - 0.55) / 0.5) : 0;
-      const eyeSpeed = eyeTarget > fs.eyeOpenness ? 2.1 : 1.0;
+      fs.smoothFlame += (targetFlame - fs.smoothFlame) * Math.min(1, dtSec * flameSpeed);
+
+      const eyeTarget = fs.eyeEnergy > 0.52 ? Math.min(1, (fs.eyeEnergy - 0.52) / 0.72) : 0;
+      const eyeSpeed = eyeTarget > fs.eyeOpenness ? 0.55 : 0.38;
 
       fs.eyeOpenness += (eyeTarget - fs.eyeOpenness) * Math.min(1, dtSec * eyeSpeed);
 
@@ -616,7 +570,7 @@ export function ZitherPanel({ tunings, auraRgb, auraHex, onPluck }: ZitherPanelP
 
       const fontSize = Math.max(10, Math.round(11 * dpr));
 
-      ctx.font = `600 ${fontSize}px "Cinzel", Georgia, serif`;
+      ctx.font = `600 ${fontSize}px "GFS Neohellenic", "Uncial Antiqua", Georgia, serif`;
       ctx.textBaseline = 'middle';
 
       const strings = stringsRef.current;

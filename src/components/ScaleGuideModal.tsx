@@ -128,10 +128,10 @@ const ScaleTitleTag = styled.span`
 
 const ScaleDescription = styled.p`
   margin: 0;
-  font-size: 0.78rem;
+  font-size: 0.84rem;
   line-height: 1.45;
-  color: rgba(234, 216, 184, 0.84);
-  font-family: ui-sans-serif, system-ui, sans-serif;
+  color: rgba(234, 216, 184, 0.86);
+  font-family: 'GFS Neohellenic', Georgia, serif;
 `;
 
 export interface ScaleGuideModalProps {

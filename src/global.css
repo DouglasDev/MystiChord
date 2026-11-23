@@ -6,7 +6,7 @@
   --brass-mid: #b38942;
   --ivory-text: #ead8b8;
   --muted-brass: rgba(226, 190, 120, 0.62);
-  font-family: 'Cinzel', 'Palatino Linotype', 'Book Antiqua', Georgia, serif;
+  font-family: 'Uncial Antiqua', 'GFS Neohellenic', Georgia, serif;
   color: var(--ivory-text);
   background: var(--wood-dark);
   font-synthesis: none;

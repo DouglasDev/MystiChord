@@ -67,58 +67,65 @@ const OvalStoneButton = styled.button`
 
   &[data-mood='blue'][data-active='true'] {
     box-shadow:
-      0 5px 14px rgba(0, 0, 0, 0.88),
-      0 0 18px rgba(34, 134, 230, 0.36),
-      inset 0 1px 3px rgba(170, 224, 255, 0.34),
-      inset 0 -8px 16px rgba(2, 10, 26, 0.86);
+      0 4px 14px rgba(0, 0, 0, 0.85),
+      0 0 22px rgba(44, 174, 255, 0.65),
+      0 0 8px rgba(100, 206, 255, 0.45),
+      inset 0 1px 4px rgba(186, 232, 255, 0.52),
+      inset 0 0 18px rgba(44, 174, 255, 0.38);
   }
 
   &[data-mood='green'][data-active='true'] {
     box-shadow:
-      0 5px 14px rgba(0, 0, 0, 0.88),
-      0 0 18px rgba(28, 178, 108, 0.36),
-      inset 0 1px 3px rgba(176, 245, 210, 0.34),
-      inset 0 -8px 16px rgba(2, 22, 12, 0.86);
+      0 4px 14px rgba(0, 0, 0, 0.85),
+      0 0 22px rgba(40, 220, 140, 0.65),
+      0 0 8px rgba(96, 244, 178, 0.45),
+      inset 0 1px 4px rgba(196, 255, 224, 0.52),
+      inset 0 0 18px rgba(40, 220, 140, 0.38);
   }
 
   &[data-mood='purple'][data-active='true'] {
     box-shadow:
-      0 5px 14px rgba(0, 0, 0, 0.88),
-      0 0 18px rgba(138, 66, 230, 0.36),
-      inset 0 1px 3px rgba(220, 188, 255, 0.34),
-      inset 0 -8px 16px rgba(16, 4, 34, 0.86);
+      0 4px 14px rgba(0, 0, 0, 0.85),
+      0 0 22px rgba(165, 82, 255, 0.68),
+      0 0 8px rgba(200, 138, 255, 0.48),
+      inset 0 1px 4px rgba(230, 204, 255, 0.52),
+      inset 0 0 18px rgba(165, 82, 255, 0.4);
   }
 
   &[data-mood='red'][data-active='true'] {
     box-shadow:
-      0 5px 14px rgba(0, 0, 0, 0.88),
-      0 0 18px rgba(210, 42, 58, 0.38),
-      inset 0 1px 3px rgba(255, 186, 192, 0.34),
-      inset 0 -8px 16px rgba(34, 2, 6, 0.86);
+      0 4px 14px rgba(0, 0, 0, 0.85),
+      0 0 22px rgba(255, 59, 78, 0.68),
+      0 0 8px rgba(255, 114, 128, 0.48),
+      inset 0 1px 4px rgba(255, 206, 210, 0.52),
+      inset 0 0 18px rgba(255, 59, 78, 0.4);
   }
 
   &[data-mood='amber'][data-active='true'] {
     box-shadow:
-      0 5px 14px rgba(0, 0, 0, 0.88),
-      0 0 18px rgba(224, 148, 36, 0.36),
-      inset 0 1px 3px rgba(255, 232, 174, 0.34),
-      inset 0 -8px 16px rgba(34, 16, 2, 0.86);
+      0 4px 14px rgba(0, 0, 0, 0.85),
+      0 0 22px rgba(255, 182, 56, 0.68),
+      0 0 8px rgba(255, 212, 118, 0.48),
+      inset 0 1px 4px rgba(255, 240, 194, 0.54),
+      inset 0 0 18px rgba(255, 182, 56, 0.4);
   }
 
   &[data-mood='teal'][data-active='true'] {
     box-shadow:
-      0 5px 14px rgba(0, 0, 0, 0.88),
-      0 0 18px rgba(22, 174, 172, 0.36),
-      inset 0 1px 3px rgba(174, 248, 244, 0.34),
-      inset 0 -8px 16px rgba(2, 22, 26, 0.86);
+      0 4px 14px rgba(0, 0, 0, 0.85),
+      0 0 22px rgba(30, 214, 208, 0.65),
+      0 0 8px rgba(98, 244, 238, 0.45),
+      inset 0 1px 4px rgba(196, 255, 252, 0.52),
+      inset 0 0 18px rgba(30, 214, 208, 0.38);
   }
 
   &[data-mood='rose'][data-active='true'] {
     box-shadow:
-      0 5px 14px rgba(0, 0, 0, 0.88),
-      0 0 18px rgba(212, 68, 154, 0.36),
-      inset 0 1px 3px rgba(255, 198, 232, 0.34),
-      inset 0 -8px 16px rgba(32, 4, 20, 0.86);
+      0 4px 14px rgba(0, 0, 0, 0.85),
+      0 0 22px rgba(255, 94, 184, 0.68),
+      0 0 8px rgba(255, 146, 210, 0.48),
+      inset 0 1px 4px rgba(255, 214, 238, 0.52),
+      inset 0 0 18px rgba(255, 94, 184, 0.4);
   }
 
   @media (max-height: 460px) {
@@ -301,6 +308,13 @@ const StoneLabel = styled.span`
   text-transform: uppercase;
   white-space: nowrap;
   text-shadow: 0 1px 4px rgba(0, 0, 0, 0.95);
+
+  &[data-active='true'] {
+    color: #fffaf0;
+    text-shadow:
+      0 0 10px rgba(var(--aura-rgb), 0.72),
+      0 1px 3px rgba(0, 0, 0, 0.95);
+  }
 `;
 
 export interface MoodButtonsPanelProps {
@@ -348,7 +362,7 @@ export function MoodButtonsPanel({ activeMood, onSelectMood }: MoodButtonsPanelP
                   data-pulsing={isPulsing ? 'true' : 'false'}
                 />
                 <StoneRune data-mood={moodKey}>{mood.rune}</StoneRune>
-                <StoneLabel>{mood.label}</StoneLabel>
+                <StoneLabel data-active={isActive ? 'true' : 'false'}>{mood.label}</StoneLabel>
               </OvalStoneButton>
             );
           })}
