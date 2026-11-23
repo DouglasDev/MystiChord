@@ -469,7 +469,8 @@ export function ZitherPanel({
       const now = performance.now();
       const dt = Math.max(4, now - prev.time);
       const speed = Math.abs(curr.y - prev.y) / dt;
-      const velocity = Math.max(0.42, Math.min(1.0, 0.45 + speed * 0.65));
+      // Wide dynamic range: gentle slow strums stay soft, fast strums surge up to 1.4
+      const velocity = Math.max(0.24, Math.min(1.4, 0.22 + speed * 0.95));
 
       const minY = Math.min(prev.y, curr.y);
       const maxY = Math.max(prev.y, curr.y);

@@ -343,7 +343,8 @@ export class AudioEngine {
 
     const ctx = this.ctx;
     const now = ctx.currentTime;
-    const vel = Math.max(0.25, Math.min(1.0, velocity));
+    const vel = Math.max(0.2, Math.min(1.45, velocity));
+    const dynVel = Math.pow(vel, 1.3);
 
     while (this.activeZitherVoices.length >= 16) {
       const oldest = this.activeZitherVoices.shift();
@@ -396,7 +397,7 @@ export class AudioEngine {
     const bodyFilter = ctx.createBiquadFilter();
 
     bodyFilter.type = 'lowpass';
-    bodyFilter.frequency.setValueAtTime(Math.min(3600, freq * 5.0), now);
+    bodyFilter.frequency.setValueAtTime(Math.min(4800, freq * (4.2 + vel * 1.4)), now);
     bodyFilter.frequency.exponentialRampToValueAtTime(Math.max(260, freq * 1.5), now + 5.5);
 
     const bodyGain = ctx.createGain();
@@ -448,10 +449,10 @@ export class AudioEngine {
     pluckGain.connect(voiceGain);
 
     const decayTime = isLowRed ? 7.2 : 5.6;
-    const peakGain = (isLowRed ? 0.22 : 0.17) * vel;
+    const peakGain = (isLowRed ? 0.25 : 0.2) * dynVel;
 
     voiceGain.gain.setValueAtTime(0.0001, now);
-    voiceGain.gain.linearRampToValueAtTime(peakGain, now + 0.022);
+    voiceGain.gain.linearRampToValueAtTime(peakGain, now + 0.02);
     voiceGain.gain.exponentialRampToValueAtTime(0.0001, now + decayTime);
 
     oscA.start(now);

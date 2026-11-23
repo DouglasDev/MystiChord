@@ -36,21 +36,30 @@ const WoodBoard = styled.div`
 
 const TopPlaque = styled.header`
   flex: 0 0 auto;
+  width: min(420px, 92vw);
+  height: 32px;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 10px;
-  padding: 4px 16px;
+  padding: 0 16px;
   margin: 0 auto;
   border-radius: 999px;
+  overflow: hidden;
   background: linear-gradient(180deg, rgba(28, 7, 8, 0.84), rgba(14, 3, 4, 0.92));
   border: 1px solid rgba(0, 0, 0, 0.65);
   box-shadow:
     0 3px 12px rgba(0, 0, 0, 0.7),
     0 0 16px rgba(var(--aura-rgb), 0.14);
 
+  @media (max-width: 520px) {
+    width: 210px;
+    padding: 0 12px;
+  }
+
   @media (max-height: 450px) {
-    padding: 2px 12px;
+    height: 26px;
+    padding: 0 12px;
   }
 `;
 
@@ -75,7 +84,13 @@ const PlaqueReadout = styled.div`
 `;
 
 const PlaqueGlyph = styled.span`
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.45em;
+  height: 1.2em;
+  line-height: 1;
+  flex-shrink: 0;
   font-weight: 700;
   color: rgb(var(--aura-rgb));
   text-shadow: 0 0 10px rgba(var(--aura-rgb), 0.72);
@@ -95,6 +110,10 @@ const PlaqueGlyph = styled.span`
 `;
 
 const PlaqueMood = styled.span`
+  display: inline-block;
+  min-width: 8.6em;
+  text-align: left;
+  line-height: 1;
   font-size: 0.88em;
   color: var(--brass-light);
 `;
