@@ -66,6 +66,13 @@ const CloseButton = styled.button`
   }
 `;
 
+const ScaleHint = styled.p`
+  margin: 0 0 2px;
+  font-size: 0.8rem;
+  color: var(--muted-brass);
+  font-family: 'GFS Neohellenic', Georgia, serif;
+`;
+
 const ScaleList = styled.div`
   flex: 1 1 auto;
   overflow-y: auto;
@@ -181,6 +188,7 @@ export function ScaleGuideModal({ open, activeMood, onClose }: ScaleGuideModalPr
           </CloseButton>
         </ModalHeader>
         <ScaleList>
+          <ScaleHint>Tap any stone repeatedly to modulate keys along its interval.</ScaleHint>
           {ORDERED_MOODS.map((key) => {
             const mood = MOODS[key];
 

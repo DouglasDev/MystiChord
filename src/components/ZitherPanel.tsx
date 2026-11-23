@@ -43,6 +43,8 @@ export interface ZitherPanelProps {
   tunings: readonly ZitherStringTuning[];
   auraRgb: RgbTuple;
   auraHex: string;
+  modulationSeq: number;
+  modulationDirection: number;
   onPluck: (stringInfo: ZitherStringTuning, velocity: number) => void;
 }
 
@@ -299,7 +301,14 @@ function drawSoundHoleFlameAndEye(
   ctx.restore();
 }
 
-export function ZitherPanel({ tunings, auraRgb, auraHex, onPluck }: ZitherPanelProps) {
+export function ZitherPanel({
+  tunings,
+  auraRgb,
+  auraHex,
+  modulationSeq,
+  modulationDirection,
+  onPluck,
+}: ZitherPanelProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const stringsRef = useRef<ZitherStringVisual[]>([]);
   const pointersRef = useRef<Map<number, PointerState>>(new Map());
@@ -317,11 +326,21 @@ export function ZitherPanel({ tunings, auraRgb, auraHex, onPluck }: ZitherPanelP
     eyeEnergy: 0,
     smoothFlame: 0,
     eyeOpenness: 0,
+    latticeAngle: 0,
+    targetLatticeAngle: 0,
     time: 0,
   });
   const onPluckRef = useRef(onPluck);
 
   onPluckRef.current = onPluck;
+
+  useEffect(() => {
+    if (modulationSeq > 0) {
+      const sign = modulationDirection >= 0 ? 1 : -1;
+
+      flameStateRef.current.targetLatticeAngle += (Math.PI / 8) * sign;
+    }
+  }, [modulationSeq, modulationDirection]);
 
   useEffect(() => {
     auraRef.current.targetRgb = [
@@ -524,6 +543,7 @@ export function ZitherPanel({ tunings, auraRgb, auraHex, onPluck }: ZitherPanelP
       const eyeSpeed = eyeTarget > fs.eyeOpenness ? 0.55 : 0.38;
 
       fs.eyeOpenness += (eyeTarget - fs.eyeOpenness) * Math.min(1, dtSec * eyeSpeed);
+      fs.latticeAngle += (fs.targetLatticeAngle - fs.latticeAngle) * Math.min(1, dtSec * 5.2);
 
       ctx.clearRect(0, 0, w, h);
 
@@ -586,9 +606,9 @@ export function ZitherPanel({ tunings, auraRgb, auraHex, onPluck }: ZitherPanelP
       ctx.beginPath();
 
       for (let k = 0; k < latticeSegments; k++) {
-        const a0 = (k / latticeSegments) * Math.PI * 2;
-        const aMid = ((k + 0.5) / latticeSegments) * Math.PI * 2;
-        const a1 = ((k + 1) / latticeSegments) * Math.PI * 2;
+        const a0 = fs.latticeAngle + (k / latticeSegments) * Math.PI * 2;
+        const aMid = fs.latticeAngle + ((k + 0.5) / latticeSegments) * Math.PI * 2;
+        const a1 = fs.latticeAngle + ((k + 1) / latticeSegments) * Math.PI * 2;
 
         // Diamond chevron zig-zag between inner and outer rings
         ctx.moveTo(holeCx + Math.cos(a0) * rInner, holeCy + Math.sin(a0) * rInner);

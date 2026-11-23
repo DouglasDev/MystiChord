@@ -2,6 +2,7 @@ import { styled } from '@linaria/react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import woodGrainUrl from './assets/wood-grain.jpg';
 import { AudioEngine } from './audioEngine';
+import { HarmonicAstrolabe } from './components/HarmonicAstrolabe';
 import { MoodButtonsPanel } from './components/MoodButtonsPanel';
 import { PadPanel } from './components/PadPanel';
 import { ScaleGuideModal } from './components/ScaleGuideModal';
@@ -74,9 +75,23 @@ const PlaqueReadout = styled.div`
 `;
 
 const PlaqueGlyph = styled.span`
+  display: inline-block;
   font-weight: 700;
   color: rgb(var(--aura-rgb));
   text-shadow: 0 0 10px rgba(var(--aura-rgb), 0.72);
+  animation: glyph-tumble 0.28s ease-out;
+
+  @keyframes glyph-tumble {
+    from {
+      opacity: 0.25;
+      transform: translateY(-6px) scale(0.84);
+    }
+
+    to {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+  }
 `;
 
 const PlaqueMood = styled.span`
@@ -105,7 +120,7 @@ const HelpButton = styled.button`
   position: fixed;
   left: max(10px, env(safe-area-inset-left));
   bottom: max(10px, env(safe-area-inset-bottom));
-  z-index: 40;
+  z-index: 20;
   appearance: none;
   width: 34px;
   height: 34px;
@@ -198,10 +213,14 @@ export function App() {
 
   const [rootMidi, setRootMidi] = useState(38);
   const [moodKey, setMoodKey] = useState<MoodKey>('blue');
+  const [modulationSeq, setModulationSeq] = useState(0);
+  const [modulationDirection, setModulationDirection] = useState(1);
+  const [keyHistory, setKeyHistory] = useState<number[]>([38]);
   const [audioUnlocked, setAudioUnlocked] = useState(false);
   const [guideOpen, setGuideOpen] = useState(false);
 
   const mood = MOODS[moodKey];
+  const nextRootMidi = useMemo(() => modulateKey(rootMidi, moodKey), [rootMidi, moodKey]);
   const aura = useMemo(() => getKeyAuraColor(rootMidi, moodKey), [rootMidi, moodKey]);
   const zitherTunings = useMemo(
     () => getZitherStringFrequencies(rootMidi, mood.intervals, 8),
@@ -267,6 +286,8 @@ export function App() {
     (nextMoodKey: MoodKey) => {
       ensureAudio();
       setMoodKey(nextMoodKey);
+      setModulationDirection(MOODS[nextMoodKey].modulationSemitones >= 0 ? 1 : -1);
+      setModulationSeq((seq) => seq + 1);
 
       setRootMidi((prevRoot) => {
         const nextRoot = modulateKey(prevRoot, nextMoodKey);
@@ -274,6 +295,7 @@ export function App() {
 
         audio.retuneActiveZither(nextTunings);
         audio.pluckString(0, nextTunings[0].freq, 0.48, true);
+        setKeyHistory((prev) => [...prev.slice(-6), nextRoot]);
 
         return nextRoot;
       });
@@ -293,7 +315,9 @@ export function App() {
         <TopPlaque aria-label="Eleusinian MystiChord Status">
           <PlaqueTitle>ELEUSINIAN MYSTICHORD</PlaqueTitle>
           <PlaqueReadout>
-            <PlaqueGlyph data-testid="key-badge">{getPitchGlyph(rootMidi)}</PlaqueGlyph>
+            <PlaqueGlyph key={modulationSeq} data-testid="key-badge">
+              {getPitchGlyph(rootMidi)}
+            </PlaqueGlyph>
             <PlaqueSep>·</PlaqueSep>
             <PlaqueMood data-testid="mood-badge">
               {mood.rune} {mood.label.toUpperCase()}
@@ -306,6 +330,8 @@ export function App() {
             tunings={zitherTunings}
             auraRgb={aura.secondary}
             auraHex={mood.colorHex}
+            modulationSeq={modulationSeq}
+            modulationDirection={modulationDirection}
             onPluck={handlePluck}
           />
           <PadPanel
@@ -328,6 +354,12 @@ export function App() {
       >
         ?
       </HelpButton>
+
+      <HarmonicAstrolabe
+        currentRootMidi={rootMidi}
+        nextRootMidi={nextRootMidi}
+        history={keyHistory}
+      />
 
       <ScaleGuideModal open={guideOpen} activeMood={moodKey} onClose={() => setGuideOpen(false)} />
 
