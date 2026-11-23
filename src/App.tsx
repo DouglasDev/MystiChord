@@ -331,7 +331,7 @@ export function App() {
           backgroundImage: `radial-gradient(ellipse at 50% 42%, rgba(72, 16, 16, 0.24) 0%, rgba(16, 4, 5, 0.68) 100%), url(${woodGrainUrl})`,
         }}
       >
-        <TopPlaque aria-label="Eleusinian MystiChord Status">
+        <TopPlaque aria-label="Eleusinian Mystichord Status">
           <PlaqueTitle>ELEUSINIAN MYSTICHORD</PlaqueTitle>
           <PlaqueReadout>
             <PlaqueGlyph key={modulationSeq} data-testid="key-badge">
