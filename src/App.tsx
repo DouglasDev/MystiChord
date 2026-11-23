@@ -1,52 +1,35 @@
 import { styled } from '@linaria/react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import woodGrainUrl from './assets/wood-grain.jpg';
 import { AudioEngine } from './audioEngine';
 import { MoodButtonsPanel } from './components/MoodButtonsPanel';
-import { MorphKnobPanel } from './components/MorphKnobPanel';
 import { PadPanel } from './components/PadPanel';
 import { SmokeOverlay } from './components/SmokeOverlay';
 import { ZitherPanel } from './components/ZitherPanel';
 import {
   MOODS,
   getKeyAuraColor,
-  getNoteName,
+  getPitchGlyph,
   getZitherStringFrequencies,
   modulateKey,
   type MoodKey,
   type ZitherStringTuning,
 } from './musicTheory';
 
-const InstrumentShell = styled.div`
+const WoodBoard = styled.div`
   position: relative;
   z-index: 10;
   width: 100%;
   height: 100dvh;
-  padding: max(8px, env(safe-area-inset-top)) max(10px, env(safe-area-inset-right))
-    max(8px, env(safe-area-inset-bottom)) max(10px, env(safe-area-inset-left));
+  padding: max(6px, env(safe-area-inset-top)) max(8px, env(safe-area-inset-right))
+    max(6px, env(safe-area-inset-bottom)) max(8px, env(safe-area-inset-left));
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  background:
-    repeating-linear-gradient(
-      92deg,
-      rgba(255, 214, 165, 0.018) 0px,
-      rgba(255, 214, 165, 0.018) 2px,
-      rgba(0, 0, 0, 0.08) 2px,
-      rgba(0, 0, 0, 0.08) 7px
-    ),
-    repeating-linear-gradient(
-      178deg,
-      rgba(90, 52, 26, 0.14) 0px,
-      rgba(34, 19, 10, 0.16) 14px,
-      rgba(16, 9, 5, 0.22) 28px
-    ),
-    radial-gradient(ellipse at 50% 45%, #3d2414 0%, #24150c 58%, #120a05 100%);
-  box-shadow: inset 0 0 60px rgba(0, 0, 0, 0.85);
-
-  @media (max-height: 450px) {
-    gap: 5px;
-    padding: 5px 8px;
-  }
+  gap: 6px;
+  background-color: #2b0b0c;
+  background-size: cover;
+  background-position: center;
+  box-shadow: inset 0 0 64px rgba(8, 2, 2, 0.85);
 `;
 
 const TopPlaque = styled.header`
@@ -54,40 +37,46 @@ const TopPlaque = styled.header`
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 12px;
-  padding: 5px 16px;
+  gap: 10px;
+  padding: 4px 16px;
   margin: 0 auto;
   border-radius: 999px;
-  background: linear-gradient(180deg, rgba(46, 30, 17, 0.92), rgba(22, 13, 7, 0.96));
-  border: 1px solid rgba(206, 162, 86, 0.42);
+  background: linear-gradient(180deg, rgba(46, 14, 14, 0.88), rgba(20, 6, 7, 0.94));
+  border: 1px solid rgba(214, 170, 92, 0.48);
   box-shadow:
-    0 2px 10px rgba(0, 0, 0, 0.6),
+    0 2px 10px rgba(0, 0, 0, 0.65),
     inset 0 1px 0 rgba(255, 224, 160, 0.18),
-    0 0 18px rgba(var(--aura-rgb), 0.16);
+    0 0 16px rgba(var(--aura-rgb), 0.16);
 
   @media (max-height: 450px) {
-    padding: 3px 12px;
+    padding: 2px 12px;
   }
 `;
 
-const PlaqueOrnament = styled.span`
-  font-size: 0.72rem;
-  color: var(--brass-mid);
+const PlaqueTitle = styled.span`
+  font-size: clamp(0.62rem, 1.45vw, 0.8rem);
+  letter-spacing: 0.16em;
+  color: var(--brass-light);
+  white-space: nowrap;
+
+  @media (max-width: 520px) {
+    display: none;
+  }
 `;
 
 const PlaqueReadout = styled.div`
   display: flex;
   align-items: center;
-  gap: 8px;
-  font-size: clamp(0.72rem, 1.8vw, 0.9rem);
-  letter-spacing: 0.09em;
+  gap: 7px;
+  font-size: clamp(0.7rem, 1.75vw, 0.88rem);
+  letter-spacing: 0.08em;
   white-space: nowrap;
 `;
 
-const PlaqueKey = styled.span`
+const PlaqueGlyph = styled.span`
   font-weight: 700;
   color: rgb(var(--aura-rgb));
-  text-shadow: 0 0 10px rgba(var(--aura-rgb), 0.7);
+  text-shadow: 0 0 10px rgba(var(--aura-rgb), 0.72);
 `;
 
 const PlaqueScale = styled.span`
@@ -95,25 +84,24 @@ const PlaqueScale = styled.span`
 `;
 
 const PlaqueMood = styled.span`
-  font-size: 0.85em;
+  font-size: 0.88em;
   color: var(--brass-light);
 `;
 
 const PlaqueSep = styled.span`
-  color: rgba(206, 162, 86, 0.45);
+  color: rgba(214, 170, 92, 0.48);
 `;
 
-const InstrumentGrid = styled.main`
+const BoardLayout = styled.main`
   flex: 1 1 auto;
   min-height: 0;
   display: grid;
   grid-template-columns: 1fr 1fr;
-  grid-template-rows: 1.48fr 1fr;
-  gap: 10px;
+  grid-template-rows: 1.45fr 1fr;
+  gap: 6px;
 
   @media (orientation: portrait) and (max-width: 720px) {
-    grid-template-rows: 1.25fr 1fr;
-    gap: 8px;
+    grid-template-rows: 1.35fr 1fr;
   }
 `;
 
@@ -124,7 +112,7 @@ const AudioUnlockOverlay = styled.div`
   display: flex;
   align-items: center;
   justify-content: center;
-  background: radial-gradient(circle at center, rgba(28, 17, 10, 0.78), rgba(10, 6, 3, 0.92));
+  background: radial-gradient(circle at center, rgba(36, 10, 10, 0.8), rgba(10, 3, 4, 0.92));
   backdrop-filter: blur(4px);
   cursor: pointer;
   transition:
@@ -142,17 +130,17 @@ const AudioUnlockCard = styled.div`
   padding: 24px 36px;
   border-radius: 16px;
   text-align: center;
-  background: linear-gradient(160deg, rgba(56, 34, 19, 0.95), rgba(22, 13, 8, 0.98));
-  border: 1.5px solid rgba(214, 168, 92, 0.58);
+  background: linear-gradient(160deg, rgba(64, 18, 18, 0.95), rgba(22, 6, 7, 0.98));
+  border: 1.5px solid rgba(218, 172, 94, 0.6);
   box-shadow:
-    0 18px 48px rgba(0, 0, 0, 0.8),
+    0 18px 48px rgba(0, 0, 0, 0.82),
     0 0 36px rgba(var(--aura-rgb), 0.22);
 `;
 
 const UnlockTitle = styled.h1`
   margin: 0 0 16px;
-  font-size: clamp(1.25rem, 3.2vw, 1.8rem);
-  letter-spacing: 0.2em;
+  font-size: clamp(1.15rem, 3vw, 1.7rem);
+  letter-spacing: 0.18em;
   color: var(--ivory-text);
   font-weight: 600;
 `;
@@ -185,7 +173,6 @@ export function App() {
 
   const [rootMidi, setRootMidi] = useState(38);
   const [moodKey, setMoodKey] = useState<MoodKey>('blue');
-  const [morph, setMorph] = useState(0.25);
   const [audioUnlocked, setAudioUnlocked] = useState(false);
 
   const mood = MOODS[moodKey];
@@ -210,7 +197,7 @@ export function App() {
   const handlePluck = useCallback(
     (stringInfo: ZitherStringTuning, velocity: number) => {
       ensureAudio();
-      audio.pluckString(stringInfo.index, stringInfo.freq, velocity, stringInfo.isDrone);
+      audio.pluckString(stringInfo.index, stringInfo.freq, velocity, stringInfo.isLowRed);
     },
     [audio, ensureAudio],
   );
@@ -224,8 +211,8 @@ export function App() {
   );
 
   const handlePadMove = useCallback(
-    (freq: number, x: number, y: number, bendDelta: number) => {
-      audio.padMove(freq, x, y, bendDelta);
+    (freq: number, x: number, y: number, motionEnergy: number, isBending: boolean) => {
+      audio.padMove(freq, x, y, motionEnergy, isBending);
     },
     [audio],
   );
@@ -233,15 +220,6 @@ export function App() {
   const handlePadUp = useCallback(() => {
     audio.padUp();
   }, [audio]);
-
-  const handleMorphChange = useCallback(
-    (nextMorph: number) => {
-      ensureAudio();
-      setMorph(nextMorph);
-      audio.setMorph(nextMorph);
-    },
-    [audio, ensureAudio],
-  );
 
   const handleSelectMood = useCallback(
     (nextMoodKey: MoodKey) => {
@@ -265,11 +243,15 @@ export function App() {
     <>
       <SmokeOverlay audio={audio} aura={aura} />
 
-      <InstrumentShell>
-        <TopPlaque aria-label="Active Key and Scale">
-          <PlaqueOrnament aria-hidden="true">◈</PlaqueOrnament>
+      <WoodBoard
+        style={{
+          backgroundImage: `radial-gradient(ellipse at 50% 42%, rgba(72, 16, 16, 0.24) 0%, rgba(16, 4, 5, 0.68) 100%), url(${woodGrainUrl})`,
+        }}
+      >
+        <TopPlaque aria-label="Eleusinian MystiChord Status">
+          <PlaqueTitle>ELEUSINIAN MYSTICHORD</PlaqueTitle>
           <PlaqueReadout>
-            <PlaqueKey data-testid="key-badge">{getNoteName(rootMidi)}</PlaqueKey>
+            <PlaqueGlyph data-testid="key-badge">{getPitchGlyph(rootMidi)}</PlaqueGlyph>
             <PlaqueSep>·</PlaqueSep>
             <PlaqueScale data-testid="scale-badge">{mood.scaleName}</PlaqueScale>
             <PlaqueSep>·</PlaqueSep>
@@ -277,10 +259,9 @@ export function App() {
               {mood.rune} {mood.label.toUpperCase()}
             </PlaqueMood>
           </PlaqueReadout>
-          <PlaqueOrnament aria-hidden="true">◈</PlaqueOrnament>
         </TopPlaque>
 
-        <InstrumentGrid>
+        <BoardLayout>
           <ZitherPanel
             tunings={zitherTunings}
             auraRgb={aura.secondary}
@@ -296,9 +277,8 @@ export function App() {
             onPadUp={handlePadUp}
           />
           <MoodButtonsPanel activeMood={moodKey} onSelectMood={handleSelectMood} />
-          <MorphKnobPanel value={morph} onChange={handleMorphChange} />
-        </InstrumentGrid>
-      </InstrumentShell>
+        </BoardLayout>
+      </WoodBoard>
 
       <AudioUnlockOverlay
         role="button"
@@ -317,7 +297,7 @@ export function App() {
         }}
       >
         <AudioUnlockCard>
-          <UnlockTitle>AETHER ZITHER</UnlockTitle>
+          <UnlockTitle>ELEUSINIAN MYSTICHORD</UnlockTitle>
           <UnlockAction>TOUCH TO ENABLE AUDIO</UnlockAction>
         </AudioUnlockCard>
       </AudioUnlockOverlay>

@@ -1,36 +1,52 @@
 import { styled } from '@linaria/react';
 import { useEffect, useRef } from 'react';
-import { computeAnchoredBend, getNoteName, yToScalePitch, type RgbTuple } from '../musicTheory';
-import {
-  EtchedHint,
-  EtchedTitle,
-  InteractiveCanvas,
-  PanelHeader,
-  RecessedWell,
-  WoodPanel,
-} from './PanelPrimitives';
+import { computeBoundedBend, getPitchGlyph, yToScalePitch, type RgbTuple } from '../musicTheory';
 
-const PadStage = styled.div`
-  flex: 1 1 auto;
+const PadArea = styled.section`
+  position: relative;
+  min-width: 0;
   min-height: 0;
+  width: 100%;
+  height: 100%;
+  padding: 4px 6px 4px 4px;
   display: flex;
-  align-items: center;
-  justify-content: center;
+  flex-direction: column;
 `;
 
-const SquarePadWell = styled(RecessedWell)`
-  flex: 0 0 auto;
-  aspect-ratio: 1 / 1;
+const PadWell = styled.div`
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+  width: 100%;
   height: 100%;
-  max-width: 100%;
-  max-height: 100%;
-  width: auto;
-  background: radial-gradient(circle at 50% 50%, rgba(28, 22, 20, 0.94), rgba(10, 8, 8, 0.98));
+  border-radius: 12px;
+  overflow: hidden;
+  background: radial-gradient(circle at 50% 50%, rgba(26, 12, 12, 0.88), rgba(10, 4, 5, 0.94));
+  border: 1.5px solid rgba(214, 170, 92, 0.46);
+  box-shadow:
+    inset 0 6px 20px rgba(0, 0, 0, 0.88),
+    inset 0 0 28px rgba(var(--aura-rgb), 0.08),
+    0 1px 0 rgba(255, 220, 160, 0.14);
+`;
 
-  @media (orientation: portrait) and (max-width: 720px) {
-    width: 100%;
-    height: auto;
-  }
+const PadCanvas = styled.canvas`
+  display: block;
+  width: 100%;
+  height: 100%;
+  touch-action: none;
+`;
+
+const AxisOverlayBottom = styled.div`
+  position: absolute;
+  left: 10px;
+  right: 10px;
+  bottom: 5px;
+  display: flex;
+  justify-content: space-between;
+  pointer-events: none;
+  font-size: clamp(0.5rem, 1.1vw, 0.64rem);
+  letter-spacing: 0.14em;
+  color: rgba(232, 198, 138, 0.56);
 `;
 
 interface TrailPoint {
@@ -44,7 +60,7 @@ export interface PadPanelProps {
   intervals: readonly number[];
   auraRgb: RgbTuple;
   onPadDown: (freq: number, x: number, y: number) => void;
-  onPadMove: (freq: number, x: number, y: number, bendDelta: number) => void;
+  onPadMove: (freq: number, x: number, y: number, motionEnergy: number, isBending: boolean) => void;
   onPadUp: () => void;
 }
 
@@ -66,11 +82,14 @@ export function PadPanel({
   const stateRef = useRef({
     activePointerId: null as number | null,
     anchorIndex: 0,
+    activeTargetIndex: 0,
     anchorY: 0.5,
+    lastX: 0.5,
     lastY: 0.5,
     currentX: 0.5,
     currentY: 0.5,
     glowAlpha: 0,
+    sustainGlow: 0,
     trail: [] as TrailPoint[],
   });
 
@@ -92,8 +111,9 @@ export function PadPanel({
 
     if (st.activePointerId !== null) {
       st.anchorIndex = Math.min(info.notes.length - 1, info.snappedIndex);
+      st.activeTargetIndex = st.anchorIndex;
       st.anchorY = st.currentY;
-      callbacksRef.current.onPadMove(info.snappedFreq, st.currentX, st.currentY, 0.01);
+      callbacksRef.current.onPadMove(info.snappedFreq, st.currentX, st.currentY, 0, false);
     }
   }, [padRootMidi, intervals, auraRgb]);
 
@@ -143,11 +163,14 @@ export function PadPanel({
       scaleRef.current.notes = pitchInfo.notes;
 
       st.anchorIndex = pitchInfo.snappedIndex;
+      st.activeTargetIndex = pitchInfo.snappedIndex;
       st.anchorY = y;
+      st.lastX = x;
       st.lastY = y;
       st.currentX = x;
       st.currentY = y;
       st.glowAlpha = 1;
+      st.sustainGlow = 0;
       st.trail = [{ x, y, life: 1.0 }];
 
       callbacksRef.current.onPadDown(pitchInfo.snappedFreq, x, y);
@@ -160,19 +183,26 @@ export function PadPanel({
 
       e.preventDefault();
       const { x, y } = normCoords(e);
-      const deltaY = y - st.anchorY;
-      const stepDelta = y - st.lastY;
+      const dx = x - st.lastX;
+      const dy = y - st.lastY;
+      const motionEnergy = Math.hypot(dx, dy);
 
+      st.lastX = x;
       st.lastY = y;
       st.currentX = x;
       st.currentY = y;
 
-      const bent = computeAnchoredBend(st.anchorIndex, deltaY, scaleRef.current.notes);
+      const deltaY = y - st.anchorY;
+      const bent = computeBoundedBend(st.anchorIndex, deltaY, scaleRef.current.notes);
+
+      st.activeTargetIndex = bent.targetIndex;
 
       st.trail.push({ x, y, life: 1.0 });
       if (st.trail.length > 26) st.trail.shift();
 
-      callbacksRef.current.onPadMove(bent.freq, x, y, stepDelta);
+      const isBending = !bent.snappedToNeighbor && Math.abs(dy) > 0.003;
+
+      callbacksRef.current.onPadMove(bent.freq, x, y, motionEnergy, isBending);
     };
 
     const onPointerRelease = (e: PointerEvent) => {
@@ -208,48 +238,55 @@ export function PadPanel({
 
       ctx.clearRect(0, 0, w, h);
 
-      const volGrad = ctx.createLinearGradient(0, 0, w, 0);
+      // Subtle left-right spectral morph tint (warm copper whine -> luminous whistle)
+      const morphGrad = ctx.createLinearGradient(0, 0, w, 0);
 
-      volGrad.addColorStop(0, 'rgba(0, 0, 0, 0.26)');
-      volGrad.addColorStop(1, `rgba(${ar}, ${ag}, ${ab}, 0.08)`);
-      ctx.fillStyle = volGrad;
+      morphGrad.addColorStop(0, 'rgba(130, 32, 24, 0.14)');
+      morphGrad.addColorStop(1, `rgba(${ar}, ${ag}, ${ab}, 0.12)`);
+      ctx.fillStyle = morphGrad;
       ctx.fillRect(0, 0, w, h);
 
       const count = notes.length;
-      const fontSize = Math.max(8, Math.round(9 * dpr));
+      const fontSize = Math.max(9, Math.round(10 * dpr));
 
       ctx.font = `600 ${fontSize}px "Cinzel", Georgia, serif`;
       ctx.textBaseline = 'middle';
 
       for (let i = 0; i < count; i++) {
         const normY = i / Math.max(1, count - 1);
-        const py = h - (h * 0.08 + normY * h * 0.84);
+        const py = h - (h * 0.09 + normY * h * 0.82);
         const isTonic = (notes[i] - rootMidi) % 12 === 0;
-        const isAnchor = st.activePointerId !== null && i === st.anchorIndex;
+        const isActiveTone =
+          st.activePointerId !== null && (i === st.anchorIndex || i === st.activeTargetIndex);
 
-        ctx.strokeStyle = isAnchor
-          ? `rgba(${ar}, ${ag}, ${ab}, 0.72)`
+        ctx.strokeStyle = isActiveTone
+          ? `rgba(${ar}, ${ag}, ${ab}, 0.78)`
           : isTonic
-            ? 'rgba(218, 174, 96, 0.34)'
+            ? 'rgba(224, 180, 102, 0.36)'
             : 'rgba(196, 156, 94, 0.14)';
 
-        ctx.lineWidth = (isAnchor ? 1.8 : isTonic ? 1.2 : 0.8) * dpr;
+        ctx.lineWidth = (isActiveTone ? 1.8 : isTonic ? 1.2 : 0.8) * dpr;
         ctx.beginPath();
-        ctx.moveTo(w * 0.08, py);
+        ctx.moveTo(w * 0.11, py);
         ctx.lineTo(w * 0.94, py);
         ctx.stroke();
 
-        if (isTonic || isAnchor) {
-          ctx.fillStyle = isAnchor ? `rgba(${ar}, ${ag}, ${ab}, 0.95)` : 'rgba(218, 174, 96, 0.55)';
+        if (isTonic || isActiveTone) {
+          ctx.fillStyle = isActiveTone
+            ? `rgba(${ar}, ${ag}, ${ab}, 0.98)`
+            : 'rgba(224, 180, 102, 0.62)';
+
           ctx.textAlign = 'left';
-          ctx.fillText(getNoteName(notes[i]), w * 0.025, py);
+          ctx.fillText(getPitchGlyph(notes[i]), w * 0.03, py);
         }
       }
 
       if (st.activePointerId === null) {
         st.glowAlpha *= Math.pow(0.08, dtSec);
+        st.sustainGlow *= Math.pow(0.12, dtSec);
       } else {
         st.glowAlpha = Math.min(1, st.glowAlpha + dtSec * 8);
+        st.sustainGlow = Math.min(1, st.sustainGlow + dtSec * 0.65);
       }
 
       for (let i = st.trail.length - 1; i >= 0; i--) {
@@ -277,7 +314,7 @@ export function PadPanel({
         const py = (1 - st.currentY) * h;
 
         const anchorNorm = st.anchorIndex / Math.max(1, count - 1);
-        const anchorPy = h - (h * 0.08 + anchorNorm * h * 0.84);
+        const anchorPy = h - (h * 0.09 + anchorNorm * h * 0.82);
 
         ctx.strokeStyle = `rgba(${ar}, ${ag}, ${ab}, ${st.glowAlpha * 0.45})`;
         ctx.lineWidth = 1.5 * dpr;
@@ -288,7 +325,8 @@ export function PadPanel({
         ctx.stroke();
         ctx.setLineDash([]);
 
-        const orbRadius = (16 + st.currentX * 18) * dpr;
+        // Orb expands smoothly with sustain volume bloom
+        const orbRadius = (18 + st.sustainGlow * 18) * dpr;
         const grad = ctx.createRadialGradient(px, py, 2 * dpr, px, py, orbRadius);
 
         grad.addColorStop(0, `rgba(255, 252, 240, ${st.glowAlpha * 0.95})`);
@@ -316,16 +354,14 @@ export function PadPanel({
   }, []);
 
   return (
-    <WoodPanel aria-label="Pitch-Bend Pad">
-      <PanelHeader>
-        <EtchedTitle>MELODY PAD</EtchedTitle>
-        <EtchedHint>↕ PITCH · ↔ VOL</EtchedHint>
-      </PanelHeader>
-      <PadStage>
-        <SquarePadWell>
-          <InteractiveCanvas ref={canvasRef} data-testid="pad-canvas" />
-        </SquarePadWell>
-      </PadStage>
-    </WoodPanel>
+    <PadArea aria-label="Melody Pad">
+      <PadWell>
+        <PadCanvas ref={canvasRef} data-testid="pad-canvas" />
+        <AxisOverlayBottom aria-hidden="true">
+          <span>WHINE</span>
+          <span>WHISTLE</span>
+        </AxisOverlayBottom>
+      </PadWell>
+    </PadArea>
   );
 }

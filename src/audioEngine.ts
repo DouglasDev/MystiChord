@@ -1,8 +1,8 @@
 import { computeMorphHarmonics, type ZitherStringTuning } from './musicTheory';
 
 export interface AudioTelemetry {
-  melodyIntensity: number;
-  zitherEnergy: number;
+  zitherDensity: number;
+  padTurbulence: number;
   padActive: boolean;
   padX: number;
   padY: number;
@@ -10,7 +10,7 @@ export interface AudioTelemetry {
 
 interface ActiveZitherVoice {
   stringIndex: number;
-  isDrone: boolean;
+  isLowRed: boolean;
   oscA: OscillatorNode;
   oscB: OscillatorNode;
   aeolianOsc: OscillatorNode;
@@ -55,17 +55,19 @@ function createAncientChamberIR(ctx: AudioContext, duration = 3.2, decay = 2.6):
 
 export class AudioEngine {
   private ctx: AudioContext | null = null;
-  private morph = 0.25;
+  private morph = 0.35;
   private activeZitherVoices: ActiveZitherVoice[] = [];
   private padActive = false;
-  private padNormalizedX = 0.5;
+  private padNormalizedX = 0.35;
   private padNormalizedY = 0.5;
-  private zitherEnergy = 0;
-  private melodyEnergy = 0;
+  private padSustainSec = 0;
+  private padVibratoEnergy = 0;
+  private lastTelemetryTime = performance.now();
+
+  private smoothZitherDensity = 0;
+  private smoothPadTurbulence = 0;
 
   private masterInput!: GainNode;
-  private analyser: AnalyserNode | null = null;
-  private analyserData: Uint8Array<ArrayBuffer> | null = null;
   private pluckNoiseBuffer!: AudioBuffer;
 
   private padHarmonics: OscillatorNode[] = [];
@@ -111,7 +113,7 @@ export class AudioEngine {
 
     const reverbSend = ctx.createGain();
 
-    reverbSend.gain.value = 0.52;
+    reverbSend.gain.value = 0.54;
 
     const convolver = ctx.createConvolver();
 
@@ -130,11 +132,6 @@ export class AudioEngine {
     compressor.attack.value = 0.006;
     compressor.release.value = 0.18;
 
-    this.analyser = ctx.createAnalyser();
-    this.analyser.fftSize = 256;
-    this.analyser.smoothingTimeConstant = 0.82;
-    this.analyserData = new Uint8Array(new ArrayBuffer(this.analyser.fftSize));
-
     this.masterInput.connect(shaper);
     shaper.connect(dryGain);
     shaper.connect(reverbSend);
@@ -143,8 +140,7 @@ export class AudioEngine {
 
     dryGain.connect(compressor);
     reverbFilter.connect(compressor);
-    compressor.connect(this.analyser);
-    this.analyser.connect(ctx.destination);
+    compressor.connect(ctx.destination);
 
     const noiseLen = Math.floor(ctx.sampleRate * 0.08);
 
@@ -230,6 +226,9 @@ export class AudioEngine {
     this.setMorph(this.morph);
   }
 
+  /**
+   * Maps left-right axis of the melody pad (0 = low whine, 1 = high theremin whistle).
+   */
   setMorph(value: number): void {
     this.morph = Math.max(0, Math.min(1, value));
 
@@ -246,15 +245,17 @@ export class AudioEngine {
     this.padFormant.frequency.setTargetAtTime(params.formantFreq, now, 0.04);
     this.padFormant.Q.setTargetAtTime(params.formantQ, now, 0.04);
 
-    const baseLp = 1400 + this.morph * 3800 + this.padNormalizedX * 1400;
-
-    this.padLowpass.frequency.setTargetAtTime(baseLp, now, 0.05);
+    const vibratoBoost = 1 + this.padVibratoEnergy * 0.45;
 
     this.vibratoOsc.frequency.setTargetAtTime(params.vibratoRateHz, now, 0.05);
-    this.vibratoGain.gain.setTargetAtTime(params.vibratoDepthCents, now, 0.05);
+    this.vibratoGain.gain.setTargetAtTime(params.vibratoDepthCents * vibratoBoost, now, 0.05);
+
+    const baseLp = 1400 + this.morph * 3800 + this.padVibratoEnergy * 1100;
+
+    this.padLowpass.frequency.setTargetAtTime(baseLp, now, 0.06);
   }
 
-  pluckString(stringIndex: number, freq: number, velocity = 0.8, isDrone = false): void {
+  pluckString(stringIndex: number, freq: number, velocity = 0.8, isLowRed = false): void {
     if (!this.ctx) return;
 
     const ctx = this.ctx;
@@ -293,11 +294,11 @@ export class AudioEngine {
     const jawari = ctx.createBiquadFilter();
 
     jawari.type = 'bandpass';
-    const centerFormant = Math.min(4200, freq * (isDrone ? 4.2 : 2.8));
+    const centerFormant = Math.min(4200, freq * (isLowRed ? 4.0 : 2.8));
 
     jawari.frequency.setValueAtTime(centerFormant * 1.35, now);
     jawari.frequency.exponentialRampToValueAtTime(centerFormant * 0.72, now + 4.8);
-    jawari.Q.value = isDrone ? 3.2 : 2.2;
+    jawari.Q.value = isLowRed ? 3.2 : 2.2;
 
     const jawariLfo = ctx.createOscillator();
 
@@ -335,7 +336,7 @@ export class AudioEngine {
     const aeolianOsc = ctx.createOscillator();
 
     aeolianOsc.type = 'sine';
-    const harmonicMult = isDrone ? 3.0 : 2.0;
+    const harmonicMult = isLowRed ? 3.0 : 2.0;
 
     aeolianOsc.frequency.setValueAtTime(freq * harmonicMult, now);
 
@@ -363,8 +364,8 @@ export class AudioEngine {
     pluckFilter.connect(pluckGain);
     pluckGain.connect(voiceGain);
 
-    const decayTime = isDrone ? 7.2 : 5.6;
-    const peakGain = (isDrone ? 0.22 : 0.17) * vel;
+    const decayTime = isLowRed ? 7.2 : 5.6;
+    const peakGain = (isLowRed ? 0.22 : 0.17) * vel;
 
     voiceGain.gain.setValueAtTime(0.0001, now);
     voiceGain.gain.linearRampToValueAtTime(peakGain, now + 0.022);
@@ -385,7 +386,7 @@ export class AudioEngine {
 
     const voice: ActiveZitherVoice = {
       stringIndex,
-      isDrone,
+      isLowRed,
       oscA,
       oscB,
       aeolianOsc,
@@ -394,7 +395,6 @@ export class AudioEngine {
     };
 
     this.activeZitherVoices.push(voice);
-    this.zitherEnergy = Math.min(1, this.zitherEnergy + 0.35 * vel);
 
     oscA.onended = () => {
       const idx = this.activeZitherVoices.indexOf(voice);
@@ -443,14 +443,22 @@ export class AudioEngine {
     }
   }
 
+  /**
+   * Press on Melody Pad: snaps to scale tone with faster attack; X sets harmonic morph.
+   * Volume starts moderate and swells via sustain + vibrato.
+   */
   padDown(freq: number, normalizedX: number, normalizedY: number): void {
     if (!this.ctx) return;
 
     const now = this.ctx.currentTime;
 
     this.padActive = true;
+    this.padSustainSec = 0;
+    this.padVibratoEnergy = 0;
     this.padNormalizedX = Math.max(0, Math.min(1, normalizedX));
     this.padNormalizedY = Math.max(0, Math.min(1, normalizedY));
+
+    this.setMorph(this.padNormalizedX);
 
     for (let i = 0; i < 5; i++) {
       const osc = this.padHarmonics[i];
@@ -459,23 +467,29 @@ export class AudioEngine {
       osc.frequency.setValueAtTime(freq * (i + 1), now);
     }
 
-    const vol = this.xToVolume(this.padNormalizedX);
-
     this.padEnvGain.gain.cancelScheduledValues(now);
     const currentGain = Math.max(0.0001, this.padEnvGain.gain.value);
 
     this.padEnvGain.gain.setValueAtTime(currentGain, now);
-    this.padEnvGain.gain.linearRampToValueAtTime(vol, now + 0.032);
+    this.padEnvGain.gain.linearRampToValueAtTime(0.22, now + 0.032);
 
     this.padBendGain.gain.cancelScheduledValues(now);
     this.padBendGain.gain.setTargetAtTime(1.0, now, 0.025);
-
-    const lp = 1500 + this.morph * 3600 + this.padNormalizedX * 1600;
-
-    this.padLowpass.frequency.setTargetAtTime(lp, now, 0.03);
   }
 
-  padMove(freq: number, normalizedX: number, normalizedY: number, bendDelta = 0): void {
+  /**
+   * Drag/Bend/Vibrato on Melody Pad:
+   * - X controls harmonic morph (low whine <-> high theremin whistle)
+   * - Y bends up to 1 scale tone above/below with slower lyrical attack
+   * - Finger movement / vibrato pumps expressive volume & warmth
+   */
+  padMove(
+    freq: number,
+    normalizedX: number,
+    normalizedY: number,
+    motionEnergy = 0,
+    isBending = false,
+  ): void {
     if (!this.ctx || !this.padActive) return;
 
     const now = this.ctx.currentTime;
@@ -483,24 +497,19 @@ export class AudioEngine {
     this.padNormalizedX = Math.max(0, Math.min(1, normalizedX));
     this.padNormalizedY = Math.max(0, Math.min(1, normalizedY));
 
+    // Accumulate vibrato expression from finger oscillation / motion
+    this.padVibratoEnergy = Math.min(1, this.padVibratoEnergy + motionEnergy * 2.8);
+
+    this.setMorph(this.padNormalizedX);
+
     for (let i = 0; i < 5; i++) {
-      this.padHarmonics[i].frequency.setTargetAtTime(freq * (i + 1), now, 0.048);
+      this.padHarmonics[i].frequency.setTargetAtTime(freq * (i + 1), now, 0.045);
     }
-
-    const vol = this.xToVolume(this.padNormalizedX);
-    const isBending = Math.abs(bendDelta) > 0.003;
-    const volTimeConst = isBending ? 0.16 : 0.06;
-
-    this.padEnvGain.gain.setTargetAtTime(vol, now, volTimeConst);
 
     if (isBending) {
-      this.padBendGain.gain.setTargetAtTime(0.86, now, 0.06);
-      this.padBendGain.gain.setTargetAtTime(1.04, now + 0.07, 0.18);
+      this.padBendGain.gain.setTargetAtTime(0.88, now, 0.06);
+      this.padBendGain.gain.setTargetAtTime(1.05, now + 0.07, 0.2);
     }
-
-    const lp = 1400 + this.morph * 3700 + this.padNormalizedX * 1500;
-
-    this.padLowpass.frequency.setTargetAtTime(lp, now, isBending ? 0.18 : 0.07);
   }
 
   padUp(): void {
@@ -509,40 +518,48 @@ export class AudioEngine {
     const now = this.ctx.currentTime;
 
     this.padActive = false;
+    this.padSustainSec = 0;
 
     this.padEnvGain.gain.cancelScheduledValues(now);
     this.padEnvGain.gain.setValueAtTime(Math.max(0.0001, this.padEnvGain.gain.value), now);
     this.padEnvGain.gain.setTargetAtTime(0.0001, now, 0.24);
   }
 
-  private xToVolume(x: number): number {
-    return 0.045 + Math.pow(x, 1.45) * 0.44;
-  }
-
   getTelemetry(): AudioTelemetry {
-    let rms = 0;
+    const nowMs = performance.now();
+    const dtSec = Math.min(0.05, Math.max(0.001, (nowMs - this.lastTelemetryTime) * 0.001));
 
-    if (this.analyser && this.analyserData) {
-      this.analyser.getByteTimeDomainData(this.analyserData);
-      let sumSq = 0;
+    this.lastTelemetryTime = nowMs;
 
-      for (let i = 0; i < this.analyserData.length; i++) {
-        const v = (this.analyserData[i] - 128) / 128;
+    // Sustain + vibrato dynamically swell volume while the pad is held
+    if (this.padActive && this.ctx) {
+      this.padSustainSec += dtSec;
+      this.padVibratoEnergy = Math.max(0, this.padVibratoEnergy * Math.pow(0.28, dtSec));
 
-        sumSq += v * v;
-      }
+      const sustainBoost = (1 - Math.exp(-this.padSustainSec / 1.45)) * 0.24;
+      const vibratoBoost = this.padVibratoEnergy * 0.3;
+      const targetGain = Math.min(0.76, 0.22 + sustainBoost + vibratoBoost);
 
-      rms = Math.sqrt(sumSq / this.analyserData.length);
+      this.padEnvGain.gain.setTargetAtTime(targetGain, this.ctx.currentTime, 0.14);
+    } else {
+      this.padVibratoEnergy = Math.max(0, this.padVibratoEnergy * Math.pow(0.15, dtSec));
     }
 
-    const padLevel = this.padActive ? 0.25 + this.padNormalizedX * 0.75 : 0;
+    // Zither cloud density scales smoothly with active ringing zither strings
+    const targetDensity = Math.min(1, this.activeZitherVoices.length / 7);
 
-    this.melodyEnergy = this.melodyEnergy * 0.9 + Math.min(1, rms * 3.8 + padLevel * 0.55) * 0.1;
-    this.zitherEnergy = Math.max(0, this.zitherEnergy * 0.965);
+    this.smoothZitherDensity +=
+      (targetDensity - this.smoothZitherDensity) * Math.min(1, dtSec * 1.8);
+
+    // Pad cloud turbulence scales smoothly when playing & vibratoing melody pad
+    const targetTurbulence = this.padActive ? 0.35 + this.padVibratoEnergy * 0.65 : 0;
+
+    this.smoothPadTurbulence +=
+      (targetTurbulence - this.smoothPadTurbulence) * Math.min(1, dtSec * 2.2);
 
     return {
-      melodyIntensity: Math.min(1, this.melodyEnergy),
-      zitherEnergy: this.zitherEnergy,
+      zitherDensity: this.smoothZitherDensity,
+      padTurbulence: this.smoothPadTurbulence,
       padActive: this.padActive,
       padX: this.padNormalizedX,
       padY: this.padNormalizedY,

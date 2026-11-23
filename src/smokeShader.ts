@@ -11,21 +11,29 @@ void main() {
 `;
 
 const FRAGMENT_SHADER = `
+#ifdef GL_FRAGMENT_PRECISION_HIGH
+precision highp float;
+#else
 precision mediump float;
+#endif
 
 varying vec2 vUv;
 
-uniform float uTime;
+uniform float uDrift;
+uniform float uSwirl;
 uniform vec2 uResolution;
 uniform vec3 uColorA;
 uniform vec3 uColorB;
-uniform float uIntensity;
-uniform float uZitherEnergy;
+uniform float uDensity;
+uniform float uTurbulence;
 uniform vec2 uPadPos;
 uniform float uPadActive;
 
+// Mobile GPU-safe hash (avoids sin() precision overflow on Adreno/Mali/Apple GPUs)
 float hash(vec2 p) {
-  return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453123);
+  vec3 p3 = fract(vec3(p.xyx) * 0.1031);
+  p3 += dot(p3, p3.yzx + 33.33);
+  return fract((p3.x + p3.y) * p3.z);
 }
 
 float noise(vec2 p) {
@@ -45,7 +53,7 @@ float fbm(vec2 p) {
   mat2 rot = mat2(0.80, 0.60, -0.60, 0.80);
   for (int i = 0; i < 4; i++) {
     value += amp * noise(p);
-    p = rot * p * 2.04 + vec2(1.7, 9.2);
+    p = rot * p * 2.02 + vec2(1.7, 9.2);
     amp *= 0.50;
   }
   return value;
@@ -53,49 +61,51 @@ float fbm(vec2 p) {
 
 void main() {
   vec2 aspect = vec2(uResolution.x / max(1.0, uResolution.y), 1.0);
-  vec2 p = vUv * aspect * 2.1;
+  vec2 p = vUv * aspect * 2.0;
 
-  float t = uTime * (0.14 + uIntensity * 0.10);
+  // Smoothly integrated phases (uDrift, uSwirl) never jump or shake
+  float warpAmp = mix(1.25, 2.55, uTurbulence);
 
   vec2 q = vec2(
-    fbm(p + vec2(t * 0.45, -t * 0.55)),
-    fbm(p + vec2(-t * 0.35 + 4.1, -t * 0.65 + 1.8))
+    fbm(p + vec2(uDrift * 0.42, -uDrift * 0.55)),
+    fbm(p + vec2(-uDrift * 0.32 + 4.1, -uDrift * 0.62 + 1.8))
   );
 
   vec2 r = vec2(
-    fbm(p + 2.6 * q + vec2(1.7, -t * 0.42)),
-    fbm(p + 2.6 * q + vec2(8.3, -t * 0.52))
+    fbm(p + warpAmp * q + vec2(1.7 + uSwirl * 0.35, -uSwirl * 0.48)),
+    fbm(p + warpAmp * q + vec2(8.3 - uSwirl * 0.28, -uSwirl * 0.54))
   );
 
-  float smoke = fbm(p + 2.2 * r - vec2(0.0, t * 0.35));
+  float smoke = fbm(p + (1.35 + uTurbulence * 0.9) * r - vec2(0.0, uDrift * 0.32));
 
-  float filament = smoothstep(0.42, 0.78, smoke) - smoothstep(0.68, 0.92, smoke) * 0.45;
-  float wisps = smoothstep(0.32, 0.86, smoke * 0.85 + length(q) * 0.22);
+  float cloudFloor = mix(0.42, 0.20, uDensity);
+  float wisps = smoothstep(cloudFloor, 0.86, smoke * 0.86 + length(q) * 0.18);
+  float filament = smoothstep(0.46, 0.78, smoke) - smoothstep(0.72, 0.94, smoke) * 0.4;
 
-  vec2 padUv = vec2(0.54 + uPadPos.x * 0.42, 0.38 + uPadPos.y * 0.56);
+  // Subtle localized glow near active melody pad touch
+  vec2 padUv = vec2(0.52 + uPadPos.x * 0.44, 0.42 + uPadPos.y * 0.52);
   float distPad = length((vUv - padUv) * aspect);
-  float padGlow = exp(-distPad * 3.8) * uPadActive * (0.35 + uIntensity * 0.65);
+  float padGlow = exp(-distPad * 3.6) * uPadActive * (0.22 + uTurbulence * 0.38);
 
-  float vignette = 1.0 - 0.18 * length((vUv - 0.5) * 1.3);
+  vec3 col = mix(uColorA, uColorB, clamp(r.y * 1.1 + filament * 0.45, 0.0, 1.0));
+  col += uColorB * filament * (0.26 + uDensity * 0.55 + uTurbulence * 0.5);
+  col += uColorB * padGlow * 0.55;
 
-  vec3 col = mix(uColorA, uColorB, clamp(r.y * 1.15 + filament * 0.45, 0.0, 1.0));
-  col += uColorB * filament * (0.28 + uIntensity * 0.85 + uZitherEnergy * 0.35);
-  col += uColorB * padGlow * 0.65;
-
-  float baseAlpha = (0.09 + uIntensity * 0.22 + uZitherEnergy * 0.09) * wisps * vignette;
-  float alpha = clamp(baseAlpha + padGlow * 0.16, 0.0, 0.48);
+  float baseAlpha = (0.12 + uDensity * 0.28 + uTurbulence * 0.12) * wisps;
+  float alpha = clamp(baseAlpha + padGlow * 0.16, 0.0, 0.56);
 
   gl_FragColor = vec4(col * alpha, alpha);
 }
 `;
 
 interface UniformLocations {
-  uTime: WebGLUniformLocation | null;
+  uDrift: WebGLUniformLocation | null;
+  uSwirl: WebGLUniformLocation | null;
   uResolution: WebGLUniformLocation | null;
   uColorA: WebGLUniformLocation | null;
   uColorB: WebGLUniformLocation | null;
-  uIntensity: WebGLUniformLocation | null;
-  uZitherEnergy: WebGLUniformLocation | null;
+  uDensity: WebGLUniformLocation | null;
+  uTurbulence: WebGLUniformLocation | null;
   uPadPos: WebGLUniformLocation | null;
   uPadActive: WebGLUniformLocation | null;
 }
@@ -106,10 +116,16 @@ export class SmokeShader {
   private program: WebGLProgram | null = null;
   private uniforms: UniformLocations | null = null;
   private currentColorA: RgbTuple = [0.1, 0.56, 0.96];
-  private currentColorB: RgbTuple = [0.3, 0.94, 1.0];
+  private currentColorB: RgbTuple = [0.34, 0.92, 1.0];
   private targetColorA: RgbTuple = [0.1, 0.56, 0.96];
-  private targetColorB: RgbTuple = [0.3, 0.94, 1.0];
-  private startTime = performance.now();
+  private targetColorB: RgbTuple = [0.34, 0.92, 1.0];
+
+  private lastTime = performance.now();
+  private driftPhase = 0;
+  private swirlPhase = 0;
+  private smoothDensity = 0;
+  private smoothTurbulence = 0;
+  private smoothPadActive = 0;
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
@@ -123,7 +139,7 @@ export class SmokeShader {
       depth: false,
       stencil: false,
       premultipliedAlpha: true,
-      powerPreference: 'low-power',
+      powerPreference: 'default',
     });
 
     if (!gl) return;
@@ -168,12 +184,13 @@ export class SmokeShader {
     gl.vertexAttribPointer(posLoc, 2, gl.FLOAT, false, 0, 0);
 
     this.uniforms = {
-      uTime: gl.getUniformLocation(program, 'uTime'),
+      uDrift: gl.getUniformLocation(program, 'uDrift'),
+      uSwirl: gl.getUniformLocation(program, 'uSwirl'),
       uResolution: gl.getUniformLocation(program, 'uResolution'),
       uColorA: gl.getUniformLocation(program, 'uColorA'),
       uColorB: gl.getUniformLocation(program, 'uColorB'),
-      uIntensity: gl.getUniformLocation(program, 'uIntensity'),
-      uZitherEnergy: gl.getUniformLocation(program, 'uZitherEnergy'),
+      uDensity: gl.getUniformLocation(program, 'uDensity'),
+      uTurbulence: gl.getUniformLocation(program, 'uTurbulence'),
       uPadPos: gl.getUniformLocation(program, 'uPadPos'),
       uPadActive: gl.getUniformLocation(program, 'uPadActive'),
     };
@@ -228,25 +245,43 @@ export class SmokeShader {
     if (!this.gl || !this.program || !this.uniforms) return;
 
     const gl = this.gl;
+    const now = performance.now();
+    const dt = Math.min(0.05, Math.max(0.001, (now - this.lastTime) * 0.001));
+
+    this.lastTime = now;
+
+    // Smoothly interpolate parameters so motion is always fluid and never shakey
+    const colorLerp = Math.min(1, dt * 3.0);
 
     for (let i = 0; i < 3; i++) {
-      this.currentColorA[i] += (this.targetColorA[i] - this.currentColorA[i]) * 0.045;
-      this.currentColorB[i] += (this.targetColorB[i] - this.currentColorB[i]) * 0.045;
+      this.currentColorA[i] += (this.targetColorA[i] - this.currentColorA[i]) * colorLerp;
+      this.currentColorB[i] += (this.targetColorB[i] - this.currentColorB[i]) * colorLerp;
     }
 
-    const elapsed = (performance.now() - this.startTime) * 0.001;
+    this.smoothDensity += (telemetry.zitherDensity - this.smoothDensity) * Math.min(1, dt * 2.0);
+
+    this.smoothTurbulence +=
+      (telemetry.padTurbulence - this.smoothTurbulence) * Math.min(1, dt * 2.4);
+
+    this.smoothPadActive +=
+      ((telemetry.padActive ? 1 : 0) - this.smoothPadActive) * Math.min(1, dt * 4.0);
+
+    // Monotonic phase integration prevents any jump or shake when turbulence changes
+    this.driftPhase += dt * (0.14 + this.smoothTurbulence * 0.16);
+    this.swirlPhase += dt * (0.1 + this.smoothTurbulence * 0.28);
 
     gl.clearColor(0, 0, 0, 0);
     gl.clear(gl.COLOR_BUFFER_BIT);
 
-    gl.uniform1f(this.uniforms.uTime, elapsed);
+    gl.uniform1f(this.uniforms.uDrift, this.driftPhase);
+    gl.uniform1f(this.uniforms.uSwirl, this.swirlPhase);
     gl.uniform2f(this.uniforms.uResolution, this.canvas.width, this.canvas.height);
     gl.uniform3fv(this.uniforms.uColorA, this.currentColorA);
     gl.uniform3fv(this.uniforms.uColorB, this.currentColorB);
-    gl.uniform1f(this.uniforms.uIntensity, telemetry.melodyIntensity);
-    gl.uniform1f(this.uniforms.uZitherEnergy, telemetry.zitherEnergy);
+    gl.uniform1f(this.uniforms.uDensity, this.smoothDensity);
+    gl.uniform1f(this.uniforms.uTurbulence, this.smoothTurbulence);
     gl.uniform2f(this.uniforms.uPadPos, telemetry.padX, telemetry.padY);
-    gl.uniform1f(this.uniforms.uPadActive, telemetry.padActive ? 1.0 : 0.0);
+    gl.uniform1f(this.uniforms.uPadActive, this.smoothPadActive);
 
     gl.drawArrays(gl.TRIANGLES, 0, 6);
   }

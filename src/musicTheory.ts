@@ -1,4 +1,4 @@
-export type MoodKey = 'blue' | 'green' | 'purple' | 'red';
+export type MoodKey = 'blue' | 'green' | 'purple' | 'red' | 'amber' | 'teal' | 'rose';
 
 export type RgbTuple = [number, number, number];
 
@@ -19,8 +19,8 @@ export interface ZitherStringTuning {
   index: number;
   midi: number;
   freq: number;
-  noteName: string;
-  isDrone: boolean;
+  glyph: string;
+  isLowRed: boolean;
 }
 
 export interface ScalePitchInfo {
@@ -29,16 +29,14 @@ export interface ScalePitchInfo {
   snappedIndex: number;
   snappedMidi: number;
   snappedFreq: number;
-  bentMidi: number;
-  bentFreq: number;
 }
 
-export interface AnchoredBendInfo {
-  pos: number;
-  nearestIndex: number;
+export interface BoundedBendInfo {
+  targetIndex: number;
+  clampedSteps: number;
+  snappedToNeighbor: boolean;
   midi: number;
   freq: number;
-  bendAmount: number;
 }
 
 export interface MorphHarmonics {
@@ -58,49 +56,44 @@ export interface AuraColors {
   secondary: RgbTuple;
 }
 
-export const NOTE_NAMES = [
-  'C',
-  'C♯',
-  'D',
-  'E♭',
-  'E',
-  'F',
-  'F♯',
-  'G',
-  'A♭',
-  'A',
-  'B♭',
-  'B',
-] as const;
+/**
+ * Ancient Greek Alypian-inspired pitch glyphs (BMP Unicode) replacing
+ * modern Western letter names (C, C#, D, etc.).
+ */
+export const PITCH_GLYPHS = ['Γ', 'Γ̇', 'Δ', 'Δ̇', 'Ζ', 'Θ', 'Θ̇', 'Λ', 'Ξ', 'Π', 'Φ', 'Ψ'] as const;
 
+/**
+ * Seven mystical non-major/non-minor scales paired with obscure Greek,
+ * Latin, and Early English emotion words.
+ */
 export const MOODS: Record<MoodKey, MoodDefinition> = {
   blue: {
     key: 'blue',
-    label: 'Calm',
+    label: 'Ataraxia',
     scaleName: 'Scriabin Prometheus',
     intervals: [0, 2, 4, 6, 9, 10],
     modulationSemitones: 5,
     modulationLabel: '+P4',
     rune: '☽',
-    colorHex: '#28a8ff',
+    colorHex: '#2caeff',
     auraPrimary: [0.1, 0.56, 0.96],
-    auraSecondary: [0.3, 0.94, 1.0],
+    auraSecondary: [0.34, 0.92, 1.0],
   },
   green: {
     key: 'green',
-    label: 'Lively',
+    label: 'Alacritas',
     scaleName: 'Satie Gnossienne',
     intervals: [0, 2, 3, 6, 7, 9, 10],
     modulationSemitones: 7,
     modulationLabel: '+P5',
     rune: '✦',
-    colorHex: '#26d98a',
+    colorHex: '#28dc8c',
     auraPrimary: [0.08, 0.8, 0.52],
     auraSecondary: [0.56, 1.0, 0.44],
   },
   purple: {
     key: 'purple',
-    label: 'Sad',
+    label: 'Wanhope',
     scaleName: 'Raga Todi',
     intervals: [0, 1, 3, 6, 7, 8, 11],
     modulationSemitones: -4,
@@ -108,11 +101,11 @@ export const MOODS: Record<MoodKey, MoodDefinition> = {
     rune: '◈',
     colorHex: '#a552ff',
     auraPrimary: [0.54, 0.22, 0.95],
-    auraSecondary: [0.9, 0.4, 1.0],
+    auraSecondary: [0.9, 0.42, 1.0],
   },
   red: {
     key: 'red',
-    label: 'Tense',
+    label: 'Agonia',
     scaleName: 'Raga Marwa',
     intervals: [0, 1, 4, 6, 9, 11],
     modulationSemitones: 6,
@@ -120,11 +113,54 @@ export const MOODS: Record<MoodKey, MoodDefinition> = {
     rune: '❖',
     colorHex: '#ff3b4e',
     auraPrimary: [0.95, 0.18, 0.28],
-    auraSecondary: [1.0, 0.58, 0.2],
+    auraSecondary: [1.0, 0.56, 0.22],
+  },
+  amber: {
+    key: 'amber',
+    label: 'Thauma',
+    scaleName: 'Raga Bhairav',
+    intervals: [0, 1, 4, 5, 7, 8, 11],
+    modulationSemitones: 4,
+    modulationLabel: '+M3',
+    rune: '☉',
+    colorHex: '#ffb638',
+    auraPrimary: [0.96, 0.62, 0.12],
+    auraSecondary: [1.0, 0.88, 0.36],
+  },
+  teal: {
+    key: 'teal',
+    label: 'Pothos',
+    scaleName: 'Raga Purvi',
+    intervals: [0, 1, 4, 6, 7, 8, 11],
+    modulationSemitones: -3,
+    modulationLabel: '−m3',
+    rune: '☤',
+    colorHex: '#1ed6d0',
+    auraPrimary: [0.06, 0.72, 0.78],
+    auraSecondary: [0.36, 1.0, 0.92],
+  },
+  rose: {
+    key: 'rose',
+    label: 'Ekstasis',
+    scaleName: 'Scriabin Octatonic',
+    intervals: [0, 1, 3, 4, 6, 7, 9, 10],
+    modulationSemitones: 1,
+    modulationLabel: '+m2',
+    rune: '✧',
+    colorHex: '#ff5eb8',
+    auraPrimary: [0.94, 0.24, 0.66],
+    auraSecondary: [1.0, 0.62, 0.88],
   },
 };
 
-export const MOOD_ORDER: readonly MoodKey[] = ['blue', 'green', 'purple', 'red'];
+/**
+ * 7 oval stones arranged in a 2 - 3 - 2 diamond configuration.
+ */
+export const MOOD_DIAMOND_ROWS: readonly (readonly MoodKey[])[] = [
+  ['blue', 'amber'],
+  ['green', 'rose', 'red'],
+  ['teal', 'purple'],
+];
 
 export const ROOT_MIN_MIDI = 36;
 
@@ -134,10 +170,10 @@ export function midiToFreq(midi: number): number {
   return 440 * Math.pow(2, (midi - 69) / 12);
 }
 
-export function getNoteName(midi: number): string {
+export function getPitchGlyph(midi: number): string {
   const pc = ((Math.round(midi) % 12) + 12) % 12;
 
-  return NOTE_NAMES[pc];
+  return PITCH_GLYPHS[pc];
 }
 
 export function modulateKey(currentRootMidi: number, moodKey: MoodKey): number {
@@ -188,8 +224,8 @@ export function getZitherStringFrequencies(
     index,
     midi,
     freq: midiToFreq(midi),
-    noteName: getNoteName(midi),
-    isDrone: index < 2,
+    glyph: getPitchGlyph(midi),
+    isLowRed: index < 3,
   }));
 }
 
@@ -204,12 +240,6 @@ export function yToScalePitch(
   const maxIdx = notes.length - 1;
   const exactPos = clamped * maxIdx;
   const snappedIndex = Math.round(exactPos);
-  const lowIndex = Math.floor(exactPos);
-  const highIndex = Math.min(maxIdx, lowIndex + 1);
-  const frac = exactPos - lowIndex;
-
-  const curvedFrac = 0.78 * frac + 0.22 * (0.5 - 0.5 * Math.cos(Math.PI * frac));
-  const bentMidi = notes[lowIndex] + (notes[highIndex] - notes[lowIndex]) * curvedFrac;
 
   return {
     notes,
@@ -217,30 +247,55 @@ export function yToScalePitch(
     snappedIndex,
     snappedMidi: notes[snappedIndex],
     snappedFreq: midiToFreq(notes[snappedIndex]),
-    bentMidi,
-    bentFreq: midiToFreq(bentMidi),
   };
 }
 
-export function computeAnchoredBend(
+/**
+ * Bounded 1-step pitch bend: starts on `anchorIndex` and bends at most to
+ * the note directly above (`anchorIndex + 1`) or directly below (`anchorIndex - 1`).
+ * Once the thumb reaches that neighbor (>= 92% of the step), it locks cleanly
+ * onto that neighbor note rather than bending further.
+ */
+export function computeBoundedBend(
   anchorIndex: number,
   deltaNormalizedY: number,
   notes: readonly number[],
-): AnchoredBendInfo {
+): BoundedBendInfo {
   const maxIdx = notes.length - 1;
-  const rawPos = Math.max(0, Math.min(maxIdx, anchorIndex + deltaNormalizedY * maxIdx));
-  const lowIndex = Math.floor(rawPos);
-  const highIndex = Math.min(maxIdx, lowIndex + 1);
-  const frac = rawPos - lowIndex;
-  const curvedFrac = 0.8 * frac + 0.2 * (0.5 - 0.5 * Math.cos(Math.PI * frac));
-  const midi = notes[lowIndex] + (notes[highIndex] - notes[lowIndex]) * curvedFrac;
+  const rawSteps = deltaNormalizedY * maxIdx;
+
+  let clampedSteps = Math.max(-1, Math.min(1, rawSteps));
+
+  if (anchorIndex === 0 && clampedSteps < 0) clampedSteps = 0;
+  if (anchorIndex === maxIdx && clampedSteps > 0) clampedSteps = 0;
+
+  let snappedToNeighbor = false;
+
+  if (clampedSteps >= 0.92 && anchorIndex < maxIdx) {
+    clampedSteps = 1;
+    snappedToNeighbor = true;
+  } else if (clampedSteps <= -0.92 && anchorIndex > 0) {
+    clampedSteps = -1;
+    snappedToNeighbor = true;
+  }
+
+  const direction = clampedSteps >= 0 ? 1 : -1;
+  const neighborIndex = Math.max(0, Math.min(maxIdx, anchorIndex + direction));
+  const frac = Math.abs(clampedSteps);
+  const curvedFrac = snappedToNeighbor
+    ? 1
+    : 0.82 * frac + 0.18 * (0.5 - 0.5 * Math.cos(Math.PI * frac));
+
+  const baseMidi = notes[anchorIndex];
+  const neighborMidi = notes[neighborIndex];
+  const midi = baseMidi + (neighborMidi - baseMidi) * curvedFrac;
 
   return {
-    pos: rawPos,
-    nearestIndex: Math.round(rawPos),
+    targetIndex: snappedToNeighbor ? neighborIndex : anchorIndex,
+    clampedSteps,
+    snappedToNeighbor,
     midi,
     freq: midiToFreq(midi),
-    bendAmount: Math.abs(rawPos - anchorIndex),
   };
 }
 

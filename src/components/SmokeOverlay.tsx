@@ -11,7 +11,6 @@ const SmokeCanvas = styled.canvas`
   height: 100%;
   pointer-events: none;
   z-index: 30;
-  mix-blend-mode: screen;
 `;
 
 export interface SmokeOverlayProps {
