@@ -86,8 +86,8 @@ export const MOODS: Record<MoodKey, MoodDefinition> = {
   },
   green: {
     key: 'green',
-    label: 'Eutrapelia',
-    origin: 'lively grace',
+    label: 'Zelos',
+    origin: 'lively ardor',
     scaleName: 'Satie Gnossienne (Dorian ♯4)',
     description:
       'Used in Erik Satie’s Gnossiennes; a raised fourth creates an augmented second with a buoyant, ancient lilt. Modulates up a fifth (+P5).',
