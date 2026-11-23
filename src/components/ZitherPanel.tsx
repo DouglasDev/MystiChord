@@ -80,36 +80,37 @@ function getBoardBounds(w: number, h: number) {
   return { topY, bottomY, rightX, topLeftX, bottomLeftX, leftAtY };
 }
 
-function drawSoftPlume(
+function drawFlameTongue(
   ctx: CanvasRenderingContext2D,
   cx: number,
-  cy: number,
-  rx: number,
-  ry: number,
-  r: number,
-  g: number,
-  b: number,
-  alpha: number,
+  baseY: number,
+  width: number,
+  height: number,
+  sway: number,
 ) {
-  ctx.save();
-  ctx.translate(cx, cy);
-  ctx.scale(1, ry / Math.max(1, rx));
+  ctx.beginPath();
+  ctx.moveTo(cx, baseY);
 
-  const grad = ctx.createRadialGradient(0, 0, rx * 0.08, 0, 0, rx);
-
-  grad.addColorStop(0, `rgba(${r}, ${g}, ${b}, ${alpha})`);
-
-  grad.addColorStop(
-    0.55,
-    `rgba(${Math.round(r * 0.55)}, ${Math.round(g * 0.45)}, ${Math.round(b * 0.55)}, ${alpha * 0.42})`,
+  ctx.bezierCurveTo(
+    cx - width,
+    baseY - height * 0.26,
+    cx - width * 0.58 + sway * 0.55,
+    baseY - height * 0.72,
+    cx + sway,
+    baseY - height,
   );
 
-  grad.addColorStop(1, 'rgba(0, 0, 0, 0)');
-  ctx.fillStyle = grad;
-  ctx.beginPath();
-  ctx.arc(0, 0, rx, 0, Math.PI * 2);
+  ctx.bezierCurveTo(
+    cx + width * 0.58 + sway * 0.55,
+    baseY - height * 0.72,
+    cx + width,
+    baseY - height * 0.26,
+    cx,
+    baseY,
+  );
+
+  ctx.closePath();
   ctx.fill();
-  ctx.restore();
 }
 
 function drawSoundHoleFlameAndEye(
@@ -138,38 +139,92 @@ function drawSoundHoleFlameAndEye(
   ctx.fillStyle = voidGrad;
   ctx.fillRect(cx - rInner, cy - rInner, rInner * 2, rInner * 2);
 
-  // Subtle smoky dark flame triggered by sustained strumming of the bottom 3 strings
+  // Dark mystical flame triggered by sustained strumming of the bottom 3 strings
   if (flameIntensity > 0.015) {
     const f = Math.min(1, flameIntensity);
-    const emberR = Math.round(ar * 0.48 + 78);
-    const emberG = Math.round(ag * 0.28 + 18);
-    const emberB = Math.round(ab * 0.42 + 24);
+    const baseY = cy + rInner * 0.96;
 
-    for (let p = 0; p < 5; p++) {
-      const cycle = (time * (0.28 + p * 0.05) + p * 0.21) % 1;
-      const sway = Math.sin(time * (1.2 + p * 0.35) + p * 2.1) * rInner * (0.14 + cycle * 0.16);
-      const py = cy + rInner * (0.72 - cycle * (0.95 + f * 0.55));
-      const rx = rInner * (0.34 + (1 - cycle) * 0.22);
-      const ry = rInner * (0.48 + cycle * 0.38);
-      const fade = Math.sin(cycle * Math.PI);
-      const alpha = f * fade * 0.26;
+    // Soft smoky ember bed inside the hole
+    const emberGrad = ctx.createRadialGradient(cx, cy + rInner * 0.25, 1, cx, cy, rInner);
 
-      drawSoftPlume(ctx, cx + sway, py, rx, ry, emberR, emberG, emberB, alpha);
-    }
-
-    const flicker = 0.85 + 0.15 * Math.sin(time * 3.1) * Math.cos(time * 1.9);
-
-    drawSoftPlume(
-      ctx,
-      cx + Math.sin(time * 1.8) * rInner * 0.06,
-      cy + rInner * 0.34,
-      rInner * 0.42,
-      rInner * 0.56,
-      Math.round(ar * 0.55 + 95),
-      Math.round(ag * 0.4 + 42),
-      Math.round(ab * 0.45 + 32),
-      f * 0.3 * flicker,
+    emberGrad.addColorStop(
+      0,
+      `rgba(${Math.round(ar * 0.52 + 72)}, ${Math.round(ag * 0.3 + 16)}, ${Math.round(ab * 0.48 + 26)}, ${f * 0.34})`,
     );
+
+    emberGrad.addColorStop(0.65, `rgba(42, 6, 14, ${f * 0.26})`);
+    emberGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+    ctx.fillStyle = emberGrad;
+    ctx.beginPath();
+    ctx.arc(cx, cy, rInner, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Soft-edged layered dark flame tongues (visible yet smoky and atmospheric)
+    ctx.save();
+    ctx.shadowColor = `rgba(${ar}, ${ag}, ${ab}, ${f * 0.45})`;
+    ctx.shadowBlur = 10 * dpr;
+
+    const sway1 = Math.sin(time * 2.1) * rInner * 0.16;
+    const outerH = rInner * (0.72 + f * 0.96);
+    const outerGrad = ctx.createLinearGradient(cx, baseY, cx, baseY - outerH);
+
+    outerGrad.addColorStop(0, `rgba(18, 3, 8, ${0.45 + f * 0.38})`);
+
+    outerGrad.addColorStop(
+      0.52,
+      `rgba(${Math.round(ar * 0.5 + 54)}, ${Math.round(ag * 0.26 + 12)}, ${Math.round(ab * 0.48 + 26)}, ${f * 0.56})`,
+    );
+
+    outerGrad.addColorStop(1, 'rgba(18, 2, 8, 0)');
+    ctx.fillStyle = outerGrad;
+    drawFlameTongue(ctx, cx, baseY, rInner * (0.48 + f * 0.18), outerH, sway1);
+
+    // Subtle flanking flame wisps
+    const swayL = Math.sin(time * 2.7 + 1.4) * rInner * 0.13;
+    const swayR = Math.cos(time * 2.4 + 0.7) * rInner * 0.13;
+    const sideGrad = ctx.createLinearGradient(cx, baseY, cx, baseY - outerH * 0.78);
+
+    sideGrad.addColorStop(0, `rgba(22, 4, 10, ${f * 0.42})`);
+
+    sideGrad.addColorStop(
+      0.55,
+      `rgba(${Math.round(ar * 0.48 + 44)}, ${Math.round(ag * 0.25 + 10)}, ${Math.round(ab * 0.46 + 24)}, ${f * 0.36})`,
+    );
+
+    sideGrad.addColorStop(1, 'rgba(12, 2, 6, 0)');
+    ctx.fillStyle = sideGrad;
+
+    drawFlameTongue(
+      ctx,
+      cx - rInner * 0.2,
+      baseY,
+      rInner * 0.26,
+      outerH * 0.76,
+      swayL - rInner * 0.08,
+    );
+
+    drawFlameTongue(
+      ctx,
+      cx + rInner * 0.2,
+      baseY,
+      rInner * 0.26,
+      outerH * 0.74,
+      swayR + rInner * 0.08,
+    );
+
+    // Dim luminous inner tongue with dark hollow base
+    const sway2 = Math.sin(time * 3.3 + 0.6) * rInner * 0.1;
+    const innerH = rInner * (0.44 + f * 0.74);
+    const innerGrad = ctx.createLinearGradient(cx, baseY, cx, baseY - innerH);
+
+    innerGrad.addColorStop(0, `rgba(10, 2, 5, ${0.5 + f * 0.32})`);
+    innerGrad.addColorStop(0.54, `rgba(${ar}, ${ag}, ${ab}, ${f * 0.48})`);
+    innerGrad.addColorStop(0.84, `rgba(242, 206, 138, ${f * f * 0.38})`);
+    innerGrad.addColorStop(1, 'rgba(242, 206, 138, 0)');
+    ctx.fillStyle = innerGrad;
+    drawFlameTongue(ctx, cx, baseY, rInner * (0.24 + f * 0.12), innerH, sway2);
+
+    ctx.restore();
   }
 
   // Ghostly, dimly luminous mystical eye triggered by sustained strumming of the upper 5 strings
@@ -342,7 +397,7 @@ export function ZitherPanel({ tunings, auraRgb, auraHex, onPluck }: ZitherPanelP
       if (s.isLowRed) {
         flameStateRef.current.flameEnergy = Math.min(
           1.35,
-          flameStateRef.current.flameEnergy + 0.085 * velocity,
+          flameStateRef.current.flameEnergy + 0.11 * velocity,
         );
       } else {
         flameStateRef.current.eyeEnergy = Math.min(
@@ -444,8 +499,8 @@ export function ZitherPanel({ tunings, auraRgb, auraHex, onPluck }: ZitherPanelP
       fs.flameEnergy = Math.max(0, fs.flameEnergy * Math.pow(0.66, dtSec));
       fs.eyeEnergy = Math.max(0, fs.eyeEnergy * Math.pow(0.68, dtSec));
 
-      const targetFlame = fs.flameEnergy > 0.34 ? Math.min(1, (fs.flameEnergy - 0.34) / 0.82) : 0;
-      const flameSpeed = targetFlame > fs.smoothFlame ? 0.75 : 0.45;
+      const targetFlame = fs.flameEnergy > 0.22 ? Math.min(1, (fs.flameEnergy - 0.22) / 0.8) : 0;
+      const flameSpeed = targetFlame > fs.smoothFlame ? 0.9 : 0.48;
 
       fs.smoothFlame += (targetFlame - fs.smoothFlame) * Math.min(1, dtSec * flameSpeed);
 

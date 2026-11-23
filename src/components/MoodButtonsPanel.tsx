@@ -33,7 +33,7 @@ const OvalStoneButton = styled.button`
   position: relative;
   overflow: hidden;
   appearance: none;
-  border: 1px solid rgba(0, 0, 0, 0.78);
+  border: 1px solid rgba(40, 24, 30, 0.75);
   border-radius: 999px;
   width: clamp(94px, 26vw, 180px);
   height: 100%;
@@ -55,7 +55,36 @@ const OvalStoneButton = styled.button`
     inset 0 -8px 16px rgba(0, 0, 0, 0.88);
   transition:
     transform 0.08s ease,
+    border-color 0.28s ease,
     box-shadow 0.28s ease;
+
+  &[data-mood='blue'] {
+    border-color: rgba(44, 126, 206, 0.42);
+  }
+
+  &[data-mood='green'] {
+    border-color: rgba(34, 152, 98, 0.42);
+  }
+
+  &[data-mood='purple'] {
+    border-color: rgba(128, 70, 208, 0.44);
+  }
+
+  &[data-mood='red'] {
+    border-color: rgba(188, 46, 62, 0.44);
+  }
+
+  &[data-mood='amber'] {
+    border-color: rgba(196, 132, 38, 0.44);
+  }
+
+  &[data-mood='teal'] {
+    border-color: rgba(30, 154, 156, 0.42);
+  }
+
+  &[data-mood='rose'] {
+    border-color: rgba(192, 64, 140, 0.44);
+  }
 
   &:active {
     transform: translateY(1px) scale(0.96);
@@ -66,6 +95,7 @@ const OvalStoneButton = styled.button`
   }
 
   &[data-mood='blue'][data-active='true'] {
+    border-color: rgba(88, 188, 255, 0.78);
     box-shadow:
       0 4px 14px rgba(0, 0, 0, 0.85),
       0 0 22px rgba(44, 174, 255, 0.65),
@@ -75,6 +105,7 @@ const OvalStoneButton = styled.button`
   }
 
   &[data-mood='green'][data-active='true'] {
+    border-color: rgba(82, 232, 162, 0.78);
     box-shadow:
       0 4px 14px rgba(0, 0, 0, 0.85),
       0 0 22px rgba(40, 220, 140, 0.65),
@@ -84,6 +115,7 @@ const OvalStoneButton = styled.button`
   }
 
   &[data-mood='purple'][data-active='true'] {
+    border-color: rgba(190, 124, 255, 0.8);
     box-shadow:
       0 4px 14px rgba(0, 0, 0, 0.85),
       0 0 22px rgba(165, 82, 255, 0.68),
@@ -93,6 +125,7 @@ const OvalStoneButton = styled.button`
   }
 
   &[data-mood='red'][data-active='true'] {
+    border-color: rgba(255, 102, 118, 0.8);
     box-shadow:
       0 4px 14px rgba(0, 0, 0, 0.85),
       0 0 22px rgba(255, 59, 78, 0.68),
@@ -102,6 +135,7 @@ const OvalStoneButton = styled.button`
   }
 
   &[data-mood='amber'][data-active='true'] {
+    border-color: rgba(255, 202, 96, 0.8);
     box-shadow:
       0 4px 14px rgba(0, 0, 0, 0.85),
       0 0 22px rgba(255, 182, 56, 0.68),
@@ -111,6 +145,7 @@ const OvalStoneButton = styled.button`
   }
 
   &[data-mood='teal'][data-active='true'] {
+    border-color: rgba(78, 232, 226, 0.78);
     box-shadow:
       0 4px 14px rgba(0, 0, 0, 0.85),
       0 0 22px rgba(30, 214, 208, 0.65),
@@ -120,6 +155,7 @@ const OvalStoneButton = styled.button`
   }
 
   &[data-mood='rose'][data-active='true'] {
+    border-color: rgba(255, 134, 204, 0.8);
     box-shadow:
       0 4px 14px rgba(0, 0, 0, 0.85),
       0 0 22px rgba(255, 94, 184, 0.68),
