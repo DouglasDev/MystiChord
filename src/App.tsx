@@ -217,7 +217,23 @@ export function App() {
 
   const ensureAudio = useCallback(() => {
     setAudioUnlocked(true);
-    void audio.ensureStarted();
+    audio.unlock();
+  }, [audio]);
+
+  useEffect(() => {
+    const onUserGesture = () => {
+      audio.unlock();
+    };
+
+    window.addEventListener('touchstart', onUserGesture, { capture: true, passive: true });
+    window.addEventListener('touchend', onUserGesture, { capture: true, passive: true });
+    window.addEventListener('click', onUserGesture, { capture: true });
+
+    return () => {
+      window.removeEventListener('touchstart', onUserGesture, { capture: true });
+      window.removeEventListener('touchend', onUserGesture, { capture: true });
+      window.removeEventListener('click', onUserGesture, { capture: true });
+    };
   }, [audio]);
 
   const handlePluck = useCallback(
@@ -320,8 +336,10 @@ export function App() {
         tabIndex={0}
         aria-label="Touch to enable audio"
         data-hidden={audioUnlocked ? 'true' : 'false'}
-        onPointerDown={(e) => {
-          e.preventDefault();
+        onClick={() => {
+          ensureAudio();
+        }}
+        onTouchEnd={() => {
           ensureAudio();
         }}
         onKeyDown={(e) => {

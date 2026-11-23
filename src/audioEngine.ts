@@ -18,6 +18,11 @@ interface ActiveZitherVoice {
   voiceGain: GainNode;
 }
 
+// Tiny 1-sample silent WAV data URI used to unlock iOS WebKit playback audio session
+// even when the hardware Ring/Silent switch is muted.
+const SILENT_WAV_DATA_URI =
+  'data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA';
+
 function createWarmthCurve(amount = 18): Float32Array<ArrayBuffer> {
   const n = 2048;
   const curve = new Float32Array(new ArrayBuffer(n * 4));
@@ -78,19 +83,97 @@ export class AudioEngine {
   private padLowpass!: BiquadFilterNode;
   private padBendGain!: GainNode;
   private padEnvGain!: GainNode;
+  private iosAudioUnlocked = false;
+  private silentAudioEl: HTMLAudioElement | null = null;
 
-  async ensureStarted(): Promise<void> {
+  /**
+   * Synchronous iOS-safe unlock to be called directly inside touchstart/touchend/click.
+   */
+  unlock(): void {
+    // 1. iOS 17+ AudioSession API: lets Web Audio play even when iPhone ringer switch is muted
+    const nav = navigator as Navigator & { audioSession?: { type: string } };
+
+    if (nav.audioSession) {
+      try {
+        nav.audioSession.type = 'playback';
+      } catch {
+        // Ignore unsupported audioSession type
+      }
+    }
+
+    // 2. Silent <audio> element fallback for iOS WebKit silent-switch unlock
+    if (!this.iosAudioUnlocked && typeof Audio !== 'undefined') {
+      try {
+        if (!this.silentAudioEl) {
+          const el = new Audio(SILENT_WAV_DATA_URI);
+
+          el.setAttribute('playsinline', 'true');
+          el.volume = 0.01;
+          this.silentAudioEl = el;
+        }
+
+        const playPromise = this.silentAudioEl.play();
+
+        if (playPromise && typeof playPromise.then === 'function') {
+          playPromise
+            .then(() => {
+              this.iosAudioUnlocked = true;
+            })
+            .catch(() => {
+              // Retry on next user gesture
+            });
+        }
+      } catch {
+        // Ignore if Audio element is unavailable
+      }
+    }
+
+    // 3. Create AudioContext synchronously within the user gesture
     if (!this.ctx) {
       const AudioCtx =
         window.AudioContext ||
         (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
 
-      this.ctx = new AudioCtx({ latencyHint: 'interactive' });
+      try {
+        this.ctx = new AudioCtx({ latencyHint: 'interactive' });
+      } catch {
+        this.ctx = new AudioCtx();
+      }
+
       this.buildGraph();
     }
 
-    if (this.ctx.state === 'suspended') {
-      await this.ctx.resume();
+    // 4. Resume synchronously (handles both 'suspended' and iOS 'interrupted' states)
+    if (this.ctx.state !== 'running') {
+      try {
+        void this.ctx.resume();
+      } catch {
+        // Ignore resume errors
+      }
+    }
+
+    // 5. Play a 1-sample silent buffer to wake iOS WebKit audio hardware immediately
+    try {
+      const silentBuf = this.ctx.createBuffer(1, 1, this.ctx.sampleRate);
+      const src = this.ctx.createBufferSource();
+
+      src.buffer = silentBuf;
+      src.connect(this.ctx.destination);
+      src.start(0);
+    } catch {
+      // Ignore if context is not yet ready
+    }
+  }
+
+  async ensureStarted(): Promise<void> {
+    this.unlock();
+
+    if (this.ctx && this.ctx.state !== 'running') {
+      try {
+        await this.ctx.resume();
+      } catch {
+        // Ignore if outside gesture
+      }
     }
   }
 

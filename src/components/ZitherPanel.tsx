@@ -339,7 +339,7 @@ export function ZitherPanel({ tunings, auraRgb, auraHex, onPluck }: ZitherPanelP
         glow: 0,
         phase: Math.random() * Math.PI * 2,
         pluckX: 0.5,
-        sparkles: createSparkles(t.isLowRed ? 9 : 11),
+        sparkles: createSparkles(t.isLowRed ? 14 : 16),
       }));
     } else {
       tunings.forEach((t, i) => {
@@ -704,32 +704,42 @@ export function ZitherPanel({ tunings, auraRgb, auraHex, onPluck }: ZitherPanelP
           ctx.stroke();
         }
 
-        for (const sp of s.sparkles) {
-          sp.t = (sp.t + dtSec * sp.speed * (1 + s.glow * 2.2)) % 1;
-          sp.phase += dtSec * (4.5 + s.glow * 9);
+        for (let spIdx = 0; spIdx < s.sparkles.length; spIdx++) {
+          const sp = s.sparkles[spIdx];
+          const isAmbient = spIdx < 5;
+
+          sp.t = (sp.t + dtSec * sp.speed * (0.85 + s.glow * 2.6)) % 1;
+          sp.phase += dtSec * (4.0 + s.glow * 10);
+
+          if (!isAmbient && s.glow < 0.04) continue;
+
           const twinkle = 0.5 + 0.5 * Math.sin(sp.phase);
-          const alpha = (0.28 + twinkle * 0.65) * (s.isLowRed ? 0.85 : 0.95) + s.glow * 0.25;
+          const restAlpha = isAmbient ? (0.1 + twinkle * 0.28) * (s.isLowRed ? 0.8 : 0.9) : 0;
+          const strumAlpha = s.glow * (0.45 + twinkle * 0.65);
+          const alpha = Math.min(1, restAlpha + strumAlpha);
+
+          if (alpha < 0.03) continue;
 
           const mt = 1 - sp.t;
           const sx = mt * mt * startX + 2 * mt * sp.t * ctrlX + sp.t * sp.t * endX;
           const sy = mt * mt * y + 2 * mt * sp.t * (y + disp) + sp.t * sp.t * y;
-          const rad = sp.size * dpr * (0.7 + twinkle * 0.65 + s.glow * 0.45);
+          const rad = sp.size * dpr * (0.55 + twinkle * 0.55 + s.glow * 0.65);
 
           ctx.fillStyle = s.isLowRed
-            ? `rgba(255, 214, 92, ${Math.min(1, alpha)})`
-            : `rgba(255, 253, 236, ${Math.min(1, alpha)})`;
+            ? `rgba(255, 214, 92, ${alpha})`
+            : `rgba(255, 253, 236, ${alpha})`;
 
           ctx.beginPath();
           ctx.arc(sx, sy, rad, 0, Math.PI * 2);
           ctx.fill();
 
-          if (twinkle > 0.78 || s.glow > 0.35) {
+          if ((isAmbient && twinkle > 0.86) || s.glow > 0.22) {
             ctx.strokeStyle = s.isLowRed
-              ? `rgba(255, 230, 130, ${Math.min(1, alpha * 0.8)})`
-              : `rgba(255, 255, 255, ${Math.min(1, alpha * 0.85)})`;
+              ? `rgba(255, 230, 130, ${Math.min(1, alpha * 0.85)})`
+              : `rgba(255, 255, 255, ${Math.min(1, alpha * 0.9)})`;
 
             ctx.lineWidth = 0.85 * dpr;
-            const arm = rad * 2.1;
+            const arm = rad * (1.8 + s.glow * 0.8);
 
             ctx.beginPath();
             ctx.moveTo(sx - arm, sy);
