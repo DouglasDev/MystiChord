@@ -285,7 +285,12 @@ export function PadPanel({
       if (st.activePointerId !== null) return;
 
       st.activePointerId = e.pointerId;
-      canvas.setPointerCapture(e.pointerId);
+
+      try {
+        canvas.setPointerCapture(e.pointerId);
+      } catch {
+        // Window-level move/up listeners handle tracking if iOS Safari rejects setPointerCapture
+      }
 
       const { x, y } = normCoords(e);
       const scaleY = rawYToScaleY(y);
@@ -357,11 +362,20 @@ export function PadPanel({
       callbacksRef.current.onPadUp();
     };
 
+    const onTouchMovePrevent = (e: TouchEvent) => {
+      if (e.cancelable) e.preventDefault();
+    };
+
     resize();
+    const resizeObserver =
+      typeof ResizeObserver !== 'undefined' ? new ResizeObserver(() => resize()) : null;
+
+    resizeObserver?.observe(canvas);
     canvas.addEventListener('pointerdown', onPointerDown);
-    canvas.addEventListener('pointermove', onPointerMove);
-    canvas.addEventListener('pointerup', onPointerRelease);
-    canvas.addEventListener('pointercancel', onPointerRelease);
+    canvas.addEventListener('touchmove', onTouchMovePrevent, { passive: false });
+    window.addEventListener('pointermove', onPointerMove, { passive: false });
+    window.addEventListener('pointerup', onPointerRelease);
+    window.addEventListener('pointercancel', onPointerRelease);
     window.addEventListener('resize', resize);
 
     let rafId = 0;
@@ -485,7 +499,7 @@ export function PadPanel({
       for (let i = 0; i < count; i++) {
         const normY = i / Math.max(1, count - 1);
         const baseY = scaleNormToCanvasY(normY, h);
-        const isTonic = (notes[i] - rootMidi) % 12 === 0;
+        const isTonic = Math.abs((notes[i] - rootMidi) % 12) < 0.001;
         const isActiveTone =
           st.activePointerId !== null && (i === st.anchorIndex || i === st.activeTargetIndex);
 
@@ -658,10 +672,12 @@ export function PadPanel({
 
     return () => {
       cancelAnimationFrame(rafId);
+      resizeObserver?.disconnect();
       canvas.removeEventListener('pointerdown', onPointerDown);
-      canvas.removeEventListener('pointermove', onPointerMove);
-      canvas.removeEventListener('pointerup', onPointerRelease);
-      canvas.removeEventListener('pointercancel', onPointerRelease);
+      canvas.removeEventListener('touchmove', onTouchMovePrevent);
+      window.removeEventListener('pointermove', onPointerMove);
+      window.removeEventListener('pointerup', onPointerRelease);
+      window.removeEventListener('pointercancel', onPointerRelease);
       window.removeEventListener('resize', resize);
     };
   }, []);

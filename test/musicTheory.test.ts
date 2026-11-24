@@ -15,18 +15,25 @@ import {
   yToScalePitch,
 } from '../src/musicTheory.ts';
 
-const MAJOR_INTERVALS = [0, 2, 4, 5, 7, 9, 11];
-const MINOR_INTERVALS = [0, 2, 3, 5, 7, 8, 10];
+const MAJOR_CENTS = [0, 200, 400, 500, 700, 900, 1100];
+const MINOR_CENTS = [0, 200, 300, 500, 700, 800, 1000];
 
-test('all 7 mystical scales are neither standard major nor natural minor', () => {
+test('all 7 mystical scales are non-major/non-minor and non-Western scales use cultural microtonal tunings', () => {
   const allMoods = Object.values(MOODS);
 
   assert.equal(allMoods.length, 7);
 
   for (const mood of allMoods) {
-    assert.notDeepEqual(mood.intervals, MAJOR_INTERVALS, `${mood.scaleName} must not be major`);
-    assert.notDeepEqual(mood.intervals, MINOR_INTERVALS, `${mood.scaleName} must not be minor`);
-    assert.equal(mood.intervals[0], 0, `${mood.scaleName} must start on root 0`);
+    assert.notDeepEqual(mood.intervalsCents, MAJOR_CENTS, `${mood.scaleName} must not be major`);
+    assert.notDeepEqual(mood.intervalsCents, MINOR_CENTS, `${mood.scaleName} must not be minor`);
+    assert.equal(mood.intervalsCents[0], 0, `${mood.scaleName} must start on root 0`);
+  }
+
+  // Non-Western scales use non-12-EDO microtonal intervals
+  for (const key of ['blue', 'purple', 'red', 'amber', 'teal'] as const) {
+    const hasMicrotonal = MOODS[key].intervalsCents.some((c) => Math.abs(c % 100) > 0.5);
+
+    assert.ok(hasMicrotonal, `${MOODS[key].scaleName} should use cultural microtonal intonation`);
   }
 
   const diamondCount = MOOD_DIAMOND_ROWS.reduce((sum, row) => sum + row.length, 0);
@@ -66,20 +73,25 @@ test('modulateKey applies mystical intervals across all 7 moods and wraps within
 });
 
 test('zither strings have 3 low red strings and 5 upper white-gold ascending strings', () => {
-  const tunings = getZitherStringFrequencies(38, MOODS.purple.intervals, 8);
+  const tunings = getZitherStringFrequencies(38, MOODS.purple.intervalsCents, 8);
 
   assert.equal(tunings.length, 8);
   assert.equal(tunings.filter((s) => s.isLowRed).length, 3);
   assert.equal(tunings.filter((s) => !s.isLowRed).length, 5);
+
+  // Pure Just fifth (~702 cents) on string 1 for Raga Todi
+  const ratio = tunings[1].freq / tunings[0].freq;
+
+  assert.ok(Math.abs(ratio - 1.5) < 0.001, 'Raga Todi drone fifth should be pure 3:2 Just fifth');
 
   for (let i = 1; i < tunings.length; i++) {
     assert.ok(tunings[i].freq > tunings[i - 1].freq);
   }
 });
 
-test('bounded pitch bend only bends up to 1 scale tone above or below and locks on neighbor', () => {
+test('bounded pitch bend only bends up to 1 scale tone above or below and nudges near origin', () => {
   const root = 50;
-  const intervals = MOODS.green.intervals;
+  const intervals = MOODS.green.intervalsCents;
   const startInfo = yToScalePitch(0.4, root, intervals, 2);
   const anchor = startInfo.snappedIndex;
   const notes = startInfo.notes;
@@ -88,7 +100,6 @@ test('bounded pitch bend only bends up to 1 scale tone above or below and locks 
 
   assert.equal(atRest.midi, notes[anchor]);
 
-  // Small drift near original note snaps/nudges smoothly back toward original pitch
   const tinyDrift = computeBoundedBend(anchor, 0.05 / (notes.length - 1), notes);
 
   assert.equal(tinyDrift.midi, notes[anchor]);
@@ -103,18 +114,15 @@ test('bounded pitch bend only bends up to 1 scale tone above or below and locks 
     'quarter-step should nudge toward original pitch',
   );
 
-  // Partial bend upward moves between anchor and anchor + 1
   const halfUp = computeBoundedBend(anchor, 0.5 / (notes.length - 1), notes);
 
   assert.ok(halfUp.midi > notes[anchor] && halfUp.midi < notes[anchor + 1]);
 
-  // Large upward drag clamps and snaps cleanly to notes[anchor + 1] (never beyond!)
   const farUp = computeBoundedBend(anchor, 0.6, notes);
 
   assert.equal(farUp.snappedToNeighbor, true);
   assert.equal(farUp.midi, notes[anchor + 1]);
 
-  // Large downward drag clamps and snaps cleanly to notes[anchor - 1] (never beyond!)
   const farDown = computeBoundedBend(anchor, -0.6, notes);
 
   assert.equal(farDown.snappedToNeighbor, true);

@@ -7,8 +7,10 @@ export interface MoodDefinition {
   label: string;
   origin: string;
   scaleName: string;
+  tuningSystem: string;
   description: string;
-  intervals: readonly number[];
+  /** Scale degrees in exact cents (100 cents = 1 equal-tempered semitone). */
+  intervalsCents: readonly number[];
   modulationSemitones: number;
   modulationLabel: string;
   rune: string;
@@ -65,8 +67,8 @@ export interface AuraColors {
 export const PITCH_GLYPHS = ['Γ', 'Γ̇', 'Δ', 'Δ̇', 'Ζ', 'Θ', 'Θ̇', 'Λ', 'Ξ', 'Π', 'Φ', 'Ψ'] as const;
 
 /**
- * Seven mystical non-major/non-minor scales from diverse traditions,
- * paired with obscure ancient Greek emotion words.
+ * Seven mystical non-major/non-minor scales tuned in their authentic
+ * cultural intonation systems (cents), paired with ancient Greek emotion words.
  */
 export const MOODS: Record<MoodKey, MoodDefinition> = {
   blue: {
@@ -74,9 +76,10 @@ export const MOODS: Record<MoodKey, MoodDefinition> = {
     label: 'Ataraxia',
     origin: 'stillness',
     scaleName: 'Scriabin Prometheus',
+    tuningSystem: 'Harmonic Overtone',
     description:
-      'Hexatonic scale derived from Scriabin’s Mystic Chord; weightless quartal and tritone harmony. Modulates up a fourth (+P4).',
-    intervals: [0, 2, 4, 6, 9, 10],
+      'Hexatonic scale from Scriabin’s Mystic Chord tuned to natural overtone ratios (1:1, 9/8, 5/4, 11/8, 5/3, 7/4). Modulates up a fourth (+P4).',
+    intervalsCents: [0, 203.9, 386.3, 551.3, 884.4, 968.8],
     modulationSemitones: 5,
     modulationLabel: '+P4',
     rune: '☽',
@@ -89,9 +92,10 @@ export const MOODS: Record<MoodKey, MoodDefinition> = {
     label: 'Zelos',
     origin: 'lively ardor',
     scaleName: 'Satie Gnossienne (Dorian ♯4)',
+    tuningSystem: '12-EDO',
     description:
       'Used in Erik Satie’s Gnossiennes; a raised fourth creates an augmented second with a buoyant, ancient lilt. Modulates up a fifth (+P5).',
-    intervals: [0, 2, 3, 6, 7, 9, 10],
+    intervalsCents: [0, 200, 300, 600, 700, 900, 1000],
     modulationSemitones: 7,
     modulationLabel: '+P5',
     rune: '✦',
@@ -104,9 +108,10 @@ export const MOODS: Record<MoodKey, MoodDefinition> = {
     label: 'Penthos',
     origin: 'sacred sorrow',
     scaleName: 'Raga Todi',
+    tuningSystem: '22-Shruti Just Intonation',
     description:
-      'Hindustani morning raga pairing flat second, flat third, and sharp fourth for poignant, devotional melancholy. Modulates down a major third (−M3).',
-    intervals: [0, 1, 3, 6, 7, 8, 11],
+      'Hindustani morning raga in 22-shruti tuning with extra-low komal Re (90¢), komal Ga (294¢), bright tivra Ma (612¢), and pure Pa (702¢). Modulates down a major third (−M3).',
+    intervalsCents: [0, 90.2, 294.1, 611.7, 702.0, 792.2, 1109.8],
     modulationSemitones: -4,
     modulationLabel: '−M3',
     rune: '◈',
@@ -119,9 +124,10 @@ export const MOODS: Record<MoodKey, MoodDefinition> = {
     label: 'Agonia',
     origin: 'taut struggle',
     scaleName: 'Raga Marwa',
+    tuningSystem: '22-Shruti Just Intonation',
     description:
-      'Hindustani dusk raga that omits the fifth entirely, suspending melodies between a flat second and sharp fourth. Modulates by a tritone (+TT).',
-    intervals: [0, 1, 4, 6, 9, 11],
+      'Hindustani dusk raga in 22-shruti tuning that omits the fifth, suspending melodies between luminous komal Re (112¢) and pure Dha (884¢). Modulates by a tritone (+TT).',
+    intervalsCents: [0, 111.7, 386.3, 590.2, 884.4, 1088.3],
     modulationSemitones: 6,
     modulationLabel: '+TT',
     rune: '❖',
@@ -134,9 +140,10 @@ export const MOODS: Record<MoodKey, MoodDefinition> = {
     label: 'Thauma',
     origin: 'wonder',
     scaleName: 'Maqam Hijaz Kar',
+    tuningSystem: 'Arabic / Byzantine Maqam',
     description:
-      'Classical Middle Eastern and Byzantine modal scale with two symmetric augmented seconds, evoking temple ritual and awe. Modulates up a major third (+M3).',
-    intervals: [0, 1, 4, 5, 7, 8, 11],
+      'Classical Middle Eastern and Byzantine mode with raised Hijaz seconds (128¢, 830¢) and pure fifth (702¢) for singing augmented seconds. Modulates up a major third (+M3).',
+    intervalsCents: [0, 128, 386.3, 498.0, 702.0, 830, 1088.3],
     modulationSemitones: 4,
     modulationLabel: '+M3',
     rune: '☉',
@@ -149,9 +156,10 @@ export const MOODS: Record<MoodKey, MoodDefinition> = {
     label: 'Pothos',
     origin: 'mythic longing',
     scaleName: 'Miyako-bushi (In Scale)',
+    tuningSystem: 'Japanese Koto Pythagorean',
     description:
-      'Traditional Japanese koto and shakuhachi mode anchored by haunting flat-second and flat-sixth pulls for bittersweet yearning. Modulates down a minor third (−m3).',
-    intervals: [0, 1, 5, 7, 8, 10],
+      'Traditional Japanese koto and shakuhachi mode tuned in pure fifths/fourths (498¢, 702¢) with deep Pythagorean semitone pulls (90¢, 792¢). Modulates down a minor third (−m3).',
+    intervalsCents: [0, 90.2, 498.0, 702.0, 792.2, 996.1],
     modulationSemitones: -3,
     modulationLabel: '−m3',
     rune: '☤',
@@ -164,9 +172,10 @@ export const MOODS: Record<MoodKey, MoodDefinition> = {
     label: 'Ekstasis',
     origin: 'trance',
     scaleName: 'Scriabin Octatonic',
+    tuningSystem: '12-EDO Symmetric',
     description:
-      'Eight-note alternating half-whole diminished scale favored in late Scriabin for hypnotic, swirling tension. Modulates up a semitone (+m2).',
-    intervals: [0, 1, 3, 4, 6, 7, 9, 10],
+      'Eight-note alternating half-whole diminished scale favored in late Scriabin for hypnotic, swirling symmetry. Modulates up a semitone (+m2).',
+    intervalsCents: [0, 100, 300, 400, 600, 700, 900, 1000],
     modulationSemitones: 1,
     modulationLabel: '+m2',
     rune: '✧',
@@ -189,6 +198,7 @@ export const ROOT_MIN_MIDI = 36;
 
 export const ROOT_MAX_MIDI = 47;
 
+/** Supports fractional microtonal MIDI values (1.0 = 100 cents). */
 export function midiToFreq(midi: number): number {
   return 440 * Math.pow(2, (midi - 69) / 12);
 }
@@ -207,16 +217,20 @@ export function modulateKey(currentRootMidi: number, moodKey: MoodKey): number {
   return ROOT_MIN_MIDI + pitchClass;
 }
 
+/**
+ * Builds an ascending array of fractional MIDI notes across `octaves` octaves
+ * using exact cultural cents intervals (inclusive of the top octave tonic).
+ */
 export function buildScaleMidiList(
   rootMidi: number,
-  intervals: readonly number[],
+  intervalsCents: readonly number[],
   octaves = 2,
 ): number[] {
   const notes: number[] = [];
 
   for (let oct = 0; oct < octaves; oct++) {
-    for (const iv of intervals) {
-      notes.push(rootMidi + oct * 12 + iv);
+    for (const cents of intervalsCents) {
+      notes.push(rootMidi + oct * 12 + cents / 100);
     }
   }
 
@@ -227,17 +241,17 @@ export function buildScaleMidiList(
 
 export function getZitherStringFrequencies(
   rootMidi: number,
-  intervals: readonly number[],
+  intervalsCents: readonly number[],
   numStrings = 8,
 ): ZitherStringTuning[] {
-  const droneSecondInterval = intervals.includes(7)
-    ? 7
-    : intervals.includes(6)
-      ? 6
-      : intervals[Math.min(3, intervals.length - 1)];
+  // Choose the scale's authentic fifth (~700¢) or tritone (~550–615¢) as the second drone string
+  const fifth = intervalsCents.find((c) => c >= 680 && c <= 720);
+  const tritone = intervalsCents.find((c) => c >= 540 && c <= 620);
+  const droneSecondCents =
+    fifth ?? tritone ?? intervalsCents[Math.min(3, intervalsCents.length - 1)];
 
-  const midis = [rootMidi, rootMidi + droneSecondInterval];
-  const upperScale = buildScaleMidiList(rootMidi + 12, intervals, 2);
+  const midis = [rootMidi, rootMidi + droneSecondCents / 100];
+  const upperScale = buildScaleMidiList(rootMidi + 12, intervalsCents, 2);
 
   for (let i = 0; midis.length < numStrings; i++) {
     midis.push(upperScale[i % upperScale.length]);
@@ -255,11 +269,11 @@ export function getZitherStringFrequencies(
 export function yToScalePitch(
   normalizedY: number,
   rootMidi: number,
-  intervals: readonly number[],
+  intervalsCents: readonly number[],
   octaves = 2,
 ): ScalePitchInfo {
   const clamped = Math.max(0, Math.min(1, normalizedY));
-  const notes = buildScaleMidiList(rootMidi, intervals, octaves);
+  const notes = buildScaleMidiList(rootMidi, intervalsCents, octaves);
   const maxIdx = notes.length - 1;
   const exactPos = clamped * maxIdx;
   const snappedIndex = Math.round(exactPos);
@@ -274,10 +288,8 @@ export function yToScalePitch(
 }
 
 /**
- * Bounded 1-step pitch bend: starts on `anchorIndex` and bends at most to
- * the note directly above (`anchorIndex + 1`) or directly below (`anchorIndex - 1`).
- * Once the thumb reaches that neighbor (>= 92% of the step), it locks cleanly
- * onto that neighbor note rather than bending further.
+ * Bounded 1-step pitch bend with a smooth quarter-step gravity well
+ * for returning cleanly to the original scale tone.
  */
 export function computeBoundedBend(
   anchorIndex: number,
@@ -311,15 +323,12 @@ export function computeBoundedBend(
   if (snappedToNeighbor) {
     curvedFrac = 1;
   } else if (frac <= 0.07) {
-    // Inner return pocket: locks cleanly onto the original pitch
     curvedFrac = 0;
   } else if (frac < 0.28) {
-    // Quarter-step gravity well: smoothly nudges pitch toward original note
     const t = (frac - 0.07) / 0.21;
 
     curvedFrac = 0.24 * Math.pow(t, 2.2);
   } else {
-    // Smooth continuous bend from 0.28 -> 0.92 up to the adjacent scale tone
     const t = (frac - 0.28) / (0.92 - 0.28);
     const eased = 0.85 * t + 0.15 * (0.5 - 0.5 * Math.cos(Math.PI * t));
 

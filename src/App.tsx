@@ -242,8 +242,8 @@ export function App() {
   const nextRootMidi = useMemo(() => modulateKey(rootMidi, moodKey), [rootMidi, moodKey]);
   const aura = useMemo(() => getKeyAuraColor(rootMidi, moodKey), [rootMidi, moodKey]);
   const zitherTunings = useMemo(
-    () => getZitherStringFrequencies(rootMidi, mood.intervals, 8),
-    [rootMidi, mood.intervals],
+    () => getZitherStringFrequencies(rootMidi, mood.intervalsCents, 8),
+    [rootMidi, mood.intervalsCents],
   );
 
   useEffect(() => {
@@ -310,7 +310,11 @@ export function App() {
 
       setRootMidi((prevRoot) => {
         const nextRoot = modulateKey(prevRoot, nextMoodKey);
-        const nextTunings = getZitherStringFrequencies(nextRoot, MOODS[nextMoodKey].intervals, 8);
+        const nextTunings = getZitherStringFrequencies(
+          nextRoot,
+          MOODS[nextMoodKey].intervalsCents,
+          8,
+        );
 
         audio.retuneActiveZither(nextTunings);
         audio.pluckString(0, nextTunings[0].freq, 0.48, true);
@@ -355,7 +359,7 @@ export function App() {
           />
           <PadPanel
             padRootMidi={rootMidi + 12}
-            intervals={mood.intervals}
+            intervals={mood.intervalsCents}
             auraRgb={aura.secondary}
             onPadDown={handlePadDown}
             onPadMove={handlePadMove}

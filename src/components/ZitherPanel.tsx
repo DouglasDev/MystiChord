@@ -161,10 +161,24 @@ function drawSoundHoleFlameAndEye(
     ctx.arc(cx, cy, rInner, 0, Math.PI * 2);
     ctx.fill();
 
-    // Soft-edged layered dark flame tongues (visible yet smoky and atmospheric)
+    // Soft-edged layered dark flame tongues (uses radial halo instead of slow ctx.shadowBlur)
     ctx.save();
-    ctx.shadowColor = `rgba(${ar}, ${ag}, ${ab}, ${f * 0.45})`;
-    ctx.shadowBlur = 10 * dpr;
+
+    const haloGrad = ctx.createRadialGradient(
+      cx,
+      cy + rInner * 0.15,
+      rInner * 0.08,
+      cx,
+      cy,
+      rInner * 0.88,
+    );
+
+    haloGrad.addColorStop(0, `rgba(${ar}, ${ag}, ${ab}, ${f * 0.22})`);
+    haloGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+    ctx.fillStyle = haloGrad;
+    ctx.beginPath();
+    ctx.arc(cx, cy, rInner * 0.88, 0, Math.PI * 2);
+    ctx.fill();
 
     const sway1 = Math.sin(time * 2.1) * rInner * 0.16;
     const outerH = rInner * (0.72 + f * 0.96);
@@ -404,10 +418,19 @@ export function ZitherPanel({
       };
     };
 
+    const lastPluckTimes = new Array<number>(8).fill(0);
+
     const triggerString = (index: number, velocity: number, xPx: number, yPx: number) => {
       const s = stringsRef.current[index];
 
       if (!s) return;
+
+      const nowMs = performance.now();
+
+      // Prevent 2px finger micro-jitter from double-triggering the same string within 65ms
+      if (nowMs - (lastPluckTimes[index] ?? 0) < 65) return;
+
+      lastPluckTimes[index] = nowMs;
 
       const bounds = getBoardBounds(canvas.width, canvas.height);
       const lx = bounds.leftAtY(yPx);
@@ -434,7 +457,14 @@ export function ZitherPanel({
 
     const onPointerDown = (e: PointerEvent) => {
       e.preventDefault();
-      canvas.setPointerCapture(e.pointerId);
+
+      // iOS Safari can throw NotFoundError/InvalidStateError on setPointerCapture for touch
+      try {
+        canvas.setPointerCapture(e.pointerId);
+      } catch {
+        // Window-level move/up listeners below guarantee tracking still works cleanly
+      }
+
       const pos = localCoords(e);
 
       pointersRef.current.set(e.pointerId, { x: pos.x, y: pos.y, time: performance.now() });
@@ -442,7 +472,7 @@ export function ZitherPanel({
       const strings = stringsRef.current;
       let bestIdx = -1;
       let bestDist = Infinity;
-      const maxDist = (canvas.height / Math.max(1, strings.length)) * 0.65;
+      const maxDist = (canvas.height / Math.max(1, strings.length)) * 0.72;
 
       for (let i = 0; i < strings.length; i++) {
         const sy = getStringY(i, strings.length, canvas.height);
@@ -459,18 +489,17 @@ export function ZitherPanel({
       }
     };
 
-    const onPointerMove = (e: PointerEvent) => {
-      const prev = pointersRef.current.get(e.pointerId);
+    const processMoveSample = (pointerId: number, sampleEvent: PointerEvent) => {
+      const prev = pointersRef.current.get(pointerId);
 
       if (!prev) return;
 
-      e.preventDefault();
-      const curr = localCoords(e);
+      const curr = localCoords(sampleEvent);
       const now = performance.now();
       const dt = Math.max(4, now - prev.time);
       const speed = Math.abs(curr.y - prev.y) / dt;
-      // Wide dynamic range: gentle slow strums stay soft, fast strums surge up to 1.4
-      const velocity = Math.max(0.24, Math.min(1.4, 0.22 + speed * 0.95));
+      // Wide dynamic range: gentle slow strums stay soft, fast strums surge up to 1.35
+      const velocity = Math.max(0.24, Math.min(1.35, 0.24 + speed * 0.9));
 
       const minY = Math.min(prev.y, curr.y);
       const maxY = Math.max(prev.y, curr.y);
@@ -482,24 +511,49 @@ export function ZitherPanel({
         if (
           (prev.y < sy && curr.y >= sy) ||
           (prev.y > sy && curr.y <= sy) ||
-          (sy >= minY && sy <= maxY && Math.abs(curr.y - prev.y) > 1.5)
+          (sy >= minY && sy <= maxY && Math.abs(curr.y - prev.y) > 2)
         ) {
           triggerString(i, velocity, curr.x, sy);
         }
       }
 
-      pointersRef.current.set(e.pointerId, { x: curr.x, y: curr.y, time: now });
+      pointersRef.current.set(pointerId, { x: curr.x, y: curr.y, time: now });
+    };
+
+    const onPointerMove = (e: PointerEvent) => {
+      if (!pointersRef.current.has(e.pointerId)) return;
+
+      e.preventDefault();
+      const samples = typeof e.getCoalescedEvents === 'function' ? e.getCoalescedEvents() : [e];
+
+      if (samples.length === 0) {
+        processMoveSample(e.pointerId, e);
+      } else {
+        for (const sample of samples) {
+          processMoveSample(e.pointerId, sample);
+        }
+      }
     };
 
     const onPointerRelease = (e: PointerEvent) => {
       pointersRef.current.delete(e.pointerId);
     };
 
+    // Prevent iOS Safari edge-swipe / scroll from cancelling rapid zither strums
+    const onTouchMovePrevent = (e: TouchEvent) => {
+      if (e.cancelable) e.preventDefault();
+    };
+
     resize();
+    const resizeObserver =
+      typeof ResizeObserver !== 'undefined' ? new ResizeObserver(() => resize()) : null;
+
+    resizeObserver?.observe(canvas);
     canvas.addEventListener('pointerdown', onPointerDown);
-    canvas.addEventListener('pointermove', onPointerMove);
-    canvas.addEventListener('pointerup', onPointerRelease);
-    canvas.addEventListener('pointercancel', onPointerRelease);
+    canvas.addEventListener('touchmove', onTouchMovePrevent, { passive: false });
+    window.addEventListener('pointermove', onPointerMove, { passive: false });
+    window.addEventListener('pointerup', onPointerRelease);
+    window.addEventListener('pointercancel', onPointerRelease);
     window.addEventListener('resize', resize);
 
     let rafId = 0;
@@ -790,10 +844,12 @@ export function ZitherPanel({
 
     return () => {
       cancelAnimationFrame(rafId);
+      resizeObserver?.disconnect();
       canvas.removeEventListener('pointerdown', onPointerDown);
-      canvas.removeEventListener('pointermove', onPointerMove);
-      canvas.removeEventListener('pointerup', onPointerRelease);
-      canvas.removeEventListener('pointercancel', onPointerRelease);
+      canvas.removeEventListener('touchmove', onTouchMovePrevent);
+      window.removeEventListener('pointermove', onPointerMove);
+      window.removeEventListener('pointerup', onPointerRelease);
+      window.removeEventListener('pointercancel', onPointerRelease);
       window.removeEventListener('resize', resize);
     };
   }, []);

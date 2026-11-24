@@ -200,7 +200,9 @@ export function ScaleGuideModal({ open, activeMood, onClose }: ScaleGuideModalPr
                     <EmotionName>{mood.label}</EmotionName>
                     <EmotionOrigin>({mood.origin})</EmotionOrigin>
                   </EmotionHeading>
-                  <ScaleTitleTag>{mood.scaleName}</ScaleTitleTag>
+                  <ScaleTitleTag>
+                    {mood.scaleName} · {mood.tuningSystem}
+                  </ScaleTitleTag>
                 </ScaleRowTop>
                 <ScaleDescription>{mood.description}</ScaleDescription>
               </ScaleRow>
