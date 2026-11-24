@@ -263,14 +263,44 @@ export function App() {
       audio.unlock();
     };
 
+    const onVisibilityChange = () => {
+      if (document.visibilityState === 'hidden') {
+        audio.handleVisibilityHide();
+      } else {
+        audio.handleVisibilityResume();
+      }
+    };
+
+    const onPageHide = () => {
+      audio.handleVisibilityHide();
+    };
+
+    const onPageShow = () => {
+      audio.handleVisibilityResume();
+    };
+
+    const onWindowFocus = () => {
+      audio.handleVisibilityResume();
+    };
+
     window.addEventListener('touchstart', onUserGesture, { capture: true, passive: true });
     window.addEventListener('touchend', onUserGesture, { capture: true, passive: true });
+    window.addEventListener('pointerdown', onUserGesture, { capture: true, passive: true });
     window.addEventListener('click', onUserGesture, { capture: true });
+    document.addEventListener('visibilitychange', onVisibilityChange);
+    window.addEventListener('pagehide', onPageHide);
+    window.addEventListener('pageshow', onPageShow);
+    window.addEventListener('focus', onWindowFocus);
 
     return () => {
       window.removeEventListener('touchstart', onUserGesture, { capture: true });
       window.removeEventListener('touchend', onUserGesture, { capture: true });
+      window.removeEventListener('pointerdown', onUserGesture, { capture: true });
       window.removeEventListener('click', onUserGesture, { capture: true });
+      document.removeEventListener('visibilitychange', onVisibilityChange);
+      window.removeEventListener('pagehide', onPageHide);
+      window.removeEventListener('pageshow', onPageShow);
+      window.removeEventListener('focus', onWindowFocus);
     };
   }, [audio]);
 

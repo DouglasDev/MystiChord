@@ -110,13 +110,183 @@ export class AudioEngine {
   private padEnvGain!: GainNode;
   private iosAudioUnlocked = false;
   private silentAudioEl: HTMLAudioElement | null = null;
+  private needsRecovery = false;
+  private contextBroken = false;
+  private lastClockAudioTime = 0;
+  private lastClockWallMs = 0;
+  private resumeWatchdogId: ReturnType<typeof setTimeout> | null = null;
+  private boundStateChange: (() => void) | null = null;
+
+  private clearResumeWatchdog(): void {
+    if (this.resumeWatchdogId !== null) {
+      clearTimeout(this.resumeWatchdogId);
+      this.resumeWatchdogId = null;
+    }
+  }
+
+  private scheduleResumeWatchdog(): void {
+    this.clearResumeWatchdog();
+
+    const targetCtx = this.ctx;
+
+    if (!targetCtx) return;
+
+    const startAudioTime = targetCtx.currentTime;
+
+    this.resumeWatchdogId = setTimeout(() => {
+      this.resumeWatchdogId = null;
+
+      if (this.ctx !== targetCtx) return;
+      if (typeof document !== 'undefined' && document.visibilityState !== 'visible') return;
+
+      if (targetCtx.state === 'closed') {
+        this.contextBroken = true;
+        this.needsRecovery = true;
+
+        return;
+      }
+
+      if (targetCtx.state === 'running') {
+        if (targetCtx.currentTime > startAudioTime + 0.001) {
+          this.lastClockAudioTime = targetCtx.currentTime;
+          this.lastClockWallMs = performance.now();
+          this.contextBroken = false;
+          this.needsRecovery = false;
+        } else {
+          // Android Chrome zombie AudioContext: state reports 'running' but clock is frozen
+          this.contextBroken = true;
+          this.needsRecovery = true;
+          this.rebuildContext();
+
+          if (this.ctx && this.ctx.state !== 'running') {
+            void this.ctx.resume().catch(() => {});
+          }
+        }
+      }
+    }, 350);
+  }
+
+  private rebuildContext(): void {
+    this.clearResumeWatchdog();
+
+    for (const voice of this.activeZitherVoices) {
+      voice.cleanup();
+    }
+
+    this.activeZitherVoices = [];
+
+    const oldCtx = this.ctx;
+
+    if (oldCtx) {
+      if (this.boundStateChange) {
+        try {
+          oldCtx.removeEventListener('statechange', this.boundStateChange);
+        } catch {
+          // Ignore listener removal errors
+        }
+      }
+
+      try {
+        void oldCtx.close().catch(() => {});
+      } catch {
+        // Ignore close errors
+      }
+    }
+
+    this.ctx = null;
+    this.boundStateChange = null;
+    this.stringBuses = [];
+    this.padHarmonics = [];
+    this.padHarmonicGains = [];
+    this.padActive = false;
+    this.padSustainSec = 0;
+    this.padVibratoEnergy = 0;
+    this.lastAppliedMorph = -1;
+    this.lastPadGainTarget = 0;
+    this.contextBroken = false;
+
+    const AudioCtx =
+      window.AudioContext ||
+      (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+
+    const ctx = new AudioCtx();
+
+    this.ctx = ctx;
+    this.lastClockAudioTime = ctx.currentTime;
+    this.lastClockWallMs = performance.now();
+
+    this.boundStateChange = () => {
+      if (this.ctx !== ctx) return;
+
+      if (ctx.state === 'closed') {
+        this.contextBroken = true;
+        this.needsRecovery = true;
+      } else if (ctx.state !== 'running') {
+        this.needsRecovery = true;
+      } else {
+        this.lastClockAudioTime = ctx.currentTime;
+        this.lastClockWallMs = performance.now();
+      }
+    };
+
+    ctx.addEventListener('statechange', this.boundStateChange);
+    this.buildGraph();
+  }
 
   /**
-   * Synchronous iOS-safe unlock to be called inside touchstart/touchend/click.
-   * Early-returns with zero allocations once audio is already running.
+   * Called when the tab is hidden, minimized, or pagehide fires.
+   * Cleanly releases any held melody pad note and marks audio for recovery on return.
+   */
+  handleVisibilityHide(): void {
+    this.padUp();
+    this.clearResumeWatchdog();
+    this.lastClockWallMs = 0;
+
+    if (this.ctx) {
+      this.needsRecovery = true;
+    }
+  }
+
+  /**
+   * Called when returning to the tab (visibilitychange -> visible, pageshow, focus).
+   * Proactively resumes suspended/interrupted audio and arms a frozen-clock watchdog
+   * to catch Android Chrome's zombie-AudioContext state.
+   */
+  handleVisibilityResume(): void {
+    if (!this.ctx) return;
+
+    this.needsRecovery = true;
+
+    if (this.ctx.state === 'closed' || this.contextBroken) {
+      this.rebuildContext();
+    }
+
+    if (!this.ctx) return;
+
+    this.lastClockAudioTime = this.ctx.currentTime;
+    this.lastClockWallMs = performance.now();
+
+    try {
+      void this.ctx.resume().catch(() => {});
+    } catch {
+      // Ignore resume errors outside a user gesture; next touch will recover in unlock()
+    }
+
+    this.scheduleResumeWatchdog();
+  }
+
+  /**
+   * Synchronous iOS/Android-safe unlock to be called inside touchstart/touchend/pointerdown/click.
+   * Early-returns with zero allocations once audio is already running and verified healthy.
    */
   unlock(): void {
-    if (this.ctx && this.ctx.state === 'running' && this.iosAudioUnlocked) {
+    if (
+      this.ctx &&
+      this.ctx.state === 'running' &&
+      this.iosAudioUnlocked &&
+      !this.needsRecovery &&
+      !this.contextBroken
+    ) {
       return;
     }
 
@@ -162,20 +332,17 @@ export class AudioEngine {
       this.iosAudioUnlocked = true;
     }
 
-    // 3. Create AudioContext synchronously within the user gesture (default balanced buffer avoids underruns)
-    if (!this.ctx) {
-      const AudioCtx =
-        window.AudioContext ||
-        (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
-
-      this.ctx = new AudioCtx();
-      this.buildGraph();
+    // 3. Create or rebuild AudioContext synchronously within the user gesture
+    if (!this.ctx || this.ctx.state === 'closed' || this.contextBroken) {
+      this.rebuildContext();
     }
 
-    // 4. Resume synchronously (handles both 'suspended' and iOS 'interrupted' states)
+    if (!this.ctx) return;
+
+    // 4. Resume synchronously (handles 'suspended', iOS 'interrupted', and post-background wake)
     if (this.ctx.state !== 'running') {
       try {
-        void this.ctx.resume();
+        void this.ctx.resume().catch(() => {});
       } catch {
         // Ignore resume errors
       }
@@ -190,6 +357,24 @@ export class AudioEngine {
         src.start(0);
       } catch {
         // Ignore if context is not yet ready
+      }
+
+      this.scheduleResumeWatchdog();
+    } else if (this.needsRecovery) {
+      if (this.ctx.currentTime > this.lastClockAudioTime + 0.001) {
+        this.lastClockAudioTime = this.ctx.currentTime;
+        this.lastClockWallMs = performance.now();
+        this.needsRecovery = false;
+      } else {
+        try {
+          void this.ctx.resume().catch(() => {});
+        } catch {
+          // Ignore resume errors
+        }
+
+        if (this.resumeWatchdogId === null) {
+          this.scheduleResumeWatchdog();
+        }
       }
     }
   }
@@ -719,9 +904,31 @@ export class AudioEngine {
 
   getTelemetry(): AudioTelemetry {
     const nowMs = performance.now();
-    const dtSec = Math.min(0.05, Math.max(0.001, (nowMs - this.lastTelemetryTime) * 0.001));
+    const rawDtMs = nowMs - this.lastTelemetryTime;
+    const dtSec = Math.min(0.05, Math.max(0.001, rawDtMs * 0.001));
 
     this.lastTelemetryTime = nowMs;
+
+    // Passive watchdog for zombie AudioContext (e.g. Android Chrome reporting 'running' with frozen clock)
+    if (this.ctx) {
+      if (rawDtMs > 250 || this.lastClockWallMs === 0) {
+        this.lastClockAudioTime = this.ctx.currentTime;
+        this.lastClockWallMs = nowMs;
+      } else if (this.ctx.state === 'running') {
+        if (this.ctx.currentTime > this.lastClockAudioTime + 0.001) {
+          this.lastClockAudioTime = this.ctx.currentTime;
+          this.lastClockWallMs = nowMs;
+          this.contextBroken = false;
+          this.needsRecovery = false;
+        } else if (nowMs - this.lastClockWallMs > 600) {
+          this.contextBroken = true;
+          this.needsRecovery = true;
+        }
+      } else if (this.ctx.state === 'closed') {
+        this.contextBroken = true;
+        this.needsRecovery = true;
+      }
+    }
 
     // Sustain + vibrato swell volume smoothly ONLY after the initial 32ms attack finishes
     if (this.padActive && this.ctx) {
