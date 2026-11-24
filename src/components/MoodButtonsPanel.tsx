@@ -63,7 +63,7 @@ const OvalStoneButton = styled.button`
   }
 
   &[data-mood='green'] {
-    border-color: rgba(34, 152, 98, 0.42);
+    border-color: rgba(188, 46, 62, 0.44);
   }
 
   &[data-mood='purple'] {
@@ -71,7 +71,7 @@ const OvalStoneButton = styled.button`
   }
 
   &[data-mood='red'] {
-    border-color: rgba(188, 46, 62, 0.44);
+    border-color: rgba(34, 152, 98, 0.42);
   }
 
   &[data-mood='amber'] {
@@ -105,13 +105,13 @@ const OvalStoneButton = styled.button`
   }
 
   &[data-mood='green'][data-active='true'] {
-    border-color: rgba(82, 232, 162, 0.78);
+    border-color: rgba(255, 102, 118, 0.8);
     box-shadow:
       0 4px 14px rgba(0, 0, 0, 0.85),
-      0 0 22px rgba(40, 220, 140, 0.65),
-      0 0 8px rgba(96, 244, 178, 0.45),
-      inset 0 1px 4px rgba(196, 255, 224, 0.52),
-      inset 0 0 18px rgba(40, 220, 140, 0.38);
+      0 0 22px rgba(255, 59, 78, 0.68),
+      0 0 8px rgba(255, 114, 128, 0.48),
+      inset 0 1px 4px rgba(255, 206, 210, 0.52),
+      inset 0 0 18px rgba(255, 59, 78, 0.4);
   }
 
   &[data-mood='purple'][data-active='true'] {
@@ -125,13 +125,13 @@ const OvalStoneButton = styled.button`
   }
 
   &[data-mood='red'][data-active='true'] {
-    border-color: rgba(255, 102, 118, 0.8);
+    border-color: rgba(82, 232, 162, 0.78);
     box-shadow:
       0 4px 14px rgba(0, 0, 0, 0.85),
-      0 0 22px rgba(255, 59, 78, 0.68),
-      0 0 8px rgba(255, 114, 128, 0.48),
-      inset 0 1px 4px rgba(255, 206, 210, 0.52),
-      inset 0 0 18px rgba(255, 59, 78, 0.4);
+      0 0 22px rgba(40, 220, 140, 0.65),
+      0 0 8px rgba(96, 244, 178, 0.45),
+      inset 0 1px 4px rgba(196, 255, 224, 0.52),
+      inset 0 0 18px rgba(40, 220, 140, 0.38);
   }
 
   &[data-mood='amber'][data-active='true'] {
@@ -198,9 +198,9 @@ const MineralBody = styled.span`
   &[data-mood='green'] {
     background: radial-gradient(
       ellipse at 50% 66%,
-      rgba(22, 132, 82, 0.54) 0%,
-      rgba(7, 46, 30, 0.88) 54%,
-      rgba(3, 14, 10, 0.98) 100%
+      rgba(166, 28, 42, 0.58) 0%,
+      rgba(68, 9, 16, 0.88) 54%,
+      rgba(20, 3, 6, 0.98) 100%
     );
   }
 
@@ -216,9 +216,9 @@ const MineralBody = styled.span`
   &[data-mood='red'] {
     background: radial-gradient(
       ellipse at 50% 66%,
-      rgba(166, 28, 42, 0.58) 0%,
-      rgba(68, 9, 16, 0.88) 54%,
-      rgba(20, 3, 6, 0.98) 100%
+      rgba(22, 132, 82, 0.54) 0%,
+      rgba(7, 46, 30, 0.88) 54%,
+      rgba(3, 14, 10, 0.98) 100%
     );
   }
 
@@ -312,7 +312,7 @@ const StoneRune = styled.span`
   }
 
   &[data-mood='green'] {
-    color: #76e8b5;
+    color: #ff828e;
   }
 
   &[data-mood='purple'] {
@@ -320,7 +320,7 @@ const StoneRune = styled.span`
   }
 
   &[data-mood='red'] {
-    color: #ff828e;
+    color: #76e8b5;
   }
 
   &[data-mood='amber'] {

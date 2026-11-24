@@ -99,9 +99,9 @@ export const MOODS: Record<MoodKey, MoodDefinition> = {
     modulationSemitones: 7,
     modulationLabel: '+P5',
     rune: '✦',
-    colorHex: '#28dc8c',
-    auraPrimary: [0.08, 0.8, 0.52],
-    auraSecondary: [0.56, 1.0, 0.44],
+    colorHex: '#ff3b4e',
+    auraPrimary: [0.95, 0.18, 0.28],
+    auraSecondary: [1.0, 0.56, 0.22],
   },
   purple: {
     key: 'purple',
@@ -131,9 +131,9 @@ export const MOODS: Record<MoodKey, MoodDefinition> = {
     modulationSemitones: 6,
     modulationLabel: '+TT',
     rune: '❖',
-    colorHex: '#ff3b4e',
-    auraPrimary: [0.95, 0.18, 0.28],
-    auraSecondary: [1.0, 0.56, 0.22],
+    colorHex: '#28dc8c',
+    auraPrimary: [0.08, 0.8, 0.52],
+    auraSecondary: [0.56, 1.0, 0.44],
   },
   amber: {
     key: 'amber',
@@ -245,11 +245,12 @@ export function getZitherStringFrequencies(
   intervalsCents: readonly number[],
   numStrings = 8,
 ): ZitherStringTuning[] {
-  // Choose the scale's authentic fifth (~700¢) or tritone (~550–615¢) as the second drone string
+  // Choose a consonant tampura drone for string 1: pure 5th, else 4th, else pure major 6th (Dha)
   const fifth = intervalsCents.find((c) => c >= 680 && c <= 720);
-  const tritone = intervalsCents.find((c) => c >= 540 && c <= 620);
+  const fourth = intervalsCents.find((c) => c >= 480 && c <= 520);
+  const majorSixth = intervalsCents.find((c) => c >= 870 && c <= 915);
   const droneSecondCents =
-    fifth ?? tritone ?? intervalsCents[Math.min(3, intervalsCents.length - 1)];
+    fifth ?? fourth ?? majorSixth ?? intervalsCents[Math.min(2, intervalsCents.length - 1)];
 
   const midis = [rootMidi, rootMidi + droneSecondCents / 100];
   const upperScale = buildScaleMidiList(rootMidi + 12, intervalsCents, 2);

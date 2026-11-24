@@ -84,6 +84,15 @@ test('zither strings have 3 low red strings and 5 upper white-gold ascending str
 
   assert.ok(Math.abs(ratio - 1.5) < 0.001, 'Raga Todi drone fifth should be pure 3:2 Just fifth');
 
+  // Ataraxia (no 5th) uses consonant 5:3 Just major sixth for its 2nd drone string (not dissonant tritone)
+  const ataraxiaTunings = getZitherStringFrequencies(38, MOODS.blue.intervalsCents, 8);
+  const ataraxiaDroneRatio = ataraxiaTunings[1].freq / ataraxiaTunings[0].freq;
+
+  assert.ok(
+    Math.abs(ataraxiaDroneRatio - 5 / 3) < 0.002,
+    'Ataraxia 2nd drone string should be consonant 5:3 major sixth',
+  );
+
   for (let i = 1; i < tunings.length; i++) {
     assert.ok(tunings[i].freq > tunings[i - 1].freq);
   }
