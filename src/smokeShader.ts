@@ -230,9 +230,11 @@ export class SmokeShader {
   resize(): void {
     if (!this.gl) return;
 
-    const dpr = Math.min(window.devicePixelRatio || 1, 1.25);
-    const w = Math.max(1, Math.floor(window.innerWidth * dpr));
-    const h = Math.max(1, Math.floor(window.innerHeight * dpr));
+    // Soft clouds look identical at 0.45x resolution while cutting GPU fill work by ~85%,
+    // preventing main-thread/compositor stalls and audio buffer dropouts on mobile & laptops.
+    const scale = 0.45;
+    const w = Math.max(1, Math.floor(window.innerWidth * scale));
+    const h = Math.max(1, Math.floor(window.innerHeight * scale));
 
     if (this.canvas.width !== w || this.canvas.height !== h) {
       this.canvas.width = w;

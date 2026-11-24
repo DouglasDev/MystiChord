@@ -359,7 +359,7 @@ export class AudioEngine {
     this.padFormant.type = 'peaking';
     this.padFormant.frequency.value = 600;
     this.padFormant.Q.value = 3.0;
-    this.padFormant.gain.value = 6.5;
+    this.padFormant.gain.value = 4.8;
 
     this.padLowpass = ctx.createBiquadFilter();
     this.padLowpass.type = 'lowpass';
@@ -417,7 +417,9 @@ export class AudioEngine {
     if (!this.ctx) return;
 
     const ctx = this.ctx;
-    const now = ctx.currentTime;
+    // 12ms lookahead guarantees the audio thread receives osc.start(t0) before t0 passes,
+    // so every voice starts cleanly at exact 0.0 gain with zero step-click.
+    const t0 = ctx.currentTime + 0.012;
     const vel = Math.max(0.22, Math.min(1.35, velocity));
     const dynVel = Math.pow(vel, 1.25);
 
@@ -427,7 +429,7 @@ export class AudioEngine {
 
       if (existing.stringIndex === stringIndex) {
         this.activeZitherVoices.splice(i, 1);
-        this.fadeOutZitherVoice(existing, 0.055);
+        this.fadeOutZitherVoice(existing, 0.045);
       }
     }
 
@@ -436,24 +438,25 @@ export class AudioEngine {
       const oldest = this.activeZitherVoices.shift();
 
       if (oldest) {
-        this.fadeOutZitherVoice(oldest, 0.08);
+        this.fadeOutZitherVoice(oldest, 0.065);
       }
     }
 
     const stringBus = this.stringBuses[stringIndex] ?? this.masterInput;
     const voiceGain = ctx.createGain();
 
+    voiceGain.gain.setValueAtTime(0, ctx.currentTime);
     voiceGain.connect(stringBus);
 
     const oscA = ctx.createOscillator();
 
     oscA.type = 'sawtooth';
-    oscA.frequency.setValueAtTime(freq, now);
+    oscA.frequency.setValueAtTime(freq, t0);
 
     const oscB = ctx.createOscillator();
 
     oscB.type = 'triangle';
-    oscB.frequency.setValueAtTime(freq * 1.0032, now);
+    oscB.frequency.setValueAtTime(freq * 1.0032, t0);
 
     // Jawari resonant shimmer driven by shared persistent LFO (zero per-pluck LFO allocation)
     const jawari = ctx.createBiquadFilter();
@@ -461,8 +464,8 @@ export class AudioEngine {
     jawari.type = 'bandpass';
     const centerFormant = Math.min(4000, freq * (isLowRed ? 3.8 : 2.7));
 
-    jawari.frequency.setValueAtTime(centerFormant * 1.32, now);
-    jawari.frequency.exponentialRampToValueAtTime(centerFormant * 0.72, now + 4.8);
+    jawari.frequency.setValueAtTime(centerFormant * 1.32, t0);
+    jawari.frequency.exponentialRampToValueAtTime(centerFormant * 0.72, t0 + 4.8);
     jawari.Q.value = isLowRed ? 2.6 : 1.9;
 
     const sharedLfo = stringIndex % 2 === 0 ? this.zitherLfoA : this.zitherLfoB;
@@ -475,8 +478,8 @@ export class AudioEngine {
     const bodyFilter = ctx.createBiquadFilter();
 
     bodyFilter.type = 'lowpass';
-    bodyFilter.frequency.setValueAtTime(Math.min(4400, freq * (4.0 + vel * 1.2)), now);
-    bodyFilter.frequency.exponentialRampToValueAtTime(Math.max(260, freq * 1.5), now + 5.5);
+    bodyFilter.frequency.setValueAtTime(Math.min(4400, freq * (4.0 + vel * 1.2)), t0);
+    bodyFilter.frequency.exponentialRampToValueAtTime(Math.max(260, freq * 1.5), t0 + 5.5);
 
     const bodyGain = ctx.createGain();
 
@@ -501,13 +504,14 @@ export class AudioEngine {
     aeolianOsc.type = 'sine';
     const harmonicMult = isLowRed ? 3.0 : 2.0;
 
-    aeolianOsc.frequency.setValueAtTime(freq * harmonicMult, now);
+    aeolianOsc.frequency.setValueAtTime(freq * harmonicMult, t0);
 
     const aeolianGain = ctx.createGain();
 
-    aeolianGain.gain.setValueAtTime(0.0001, now);
-    aeolianGain.gain.linearRampToValueAtTime(0.14 * Math.min(1.15, vel), now + 0.55);
-    aeolianGain.gain.exponentialRampToValueAtTime(0.0001, now + 6.4);
+    aeolianGain.gain.setValueAtTime(0, ctx.currentTime);
+    aeolianGain.gain.setValueAtTime(0.0001, t0);
+    aeolianGain.gain.linearRampToValueAtTime(0.14 * Math.min(1.15, vel), t0 + 0.55);
+    aeolianGain.gain.exponentialRampToValueAtTime(0.0001, t0 + 6.4);
 
     aeolianOsc.connect(aeolianGain);
     aeolianGain.connect(voiceGain);
@@ -525,16 +529,17 @@ export class AudioEngine {
     const decayTime = isLowRed ? 6.8 : 5.4;
     const peakGain = (isLowRed ? 0.21 : 0.17) * dynVel;
 
-    voiceGain.gain.setValueAtTime(0.0001, now);
-    voiceGain.gain.linearRampToValueAtTime(peakGain, now + 0.022);
-    voiceGain.gain.exponentialRampToValueAtTime(0.0001, now + decayTime);
+    voiceGain.gain.setValueAtTime(0, t0);
+    voiceGain.gain.linearRampToValueAtTime(peakGain, t0 + 0.024);
+    voiceGain.gain.exponentialRampToValueAtTime(0.0001, t0 + decayTime);
+    voiceGain.gain.linearRampToValueAtTime(0, t0 + decayTime + 0.04);
 
-    oscA.start(now);
-    oscB.start(now);
-    aeolianOsc.start(now);
-    pluckSrc.start(now);
+    oscA.start(t0);
+    oscB.start(t0);
+    aeolianOsc.start(t0);
+    pluckSrc.start(t0);
 
-    const stopTime = now + decayTime + 0.12;
+    const stopTime = t0 + decayTime + 0.08;
 
     oscA.stop(stopTime);
     oscB.stop(stopTime);
@@ -596,15 +601,15 @@ export class AudioEngine {
     };
   }
 
-  private fadeOutZitherVoice(voice: ActiveZitherVoice, fadeSec = 0.08): void {
+  private fadeOutZitherVoice(voice: ActiveZitherVoice, fadeSec = 0.06): void {
     if (!this.ctx || voice.cleanedUp) return;
 
-    const now = this.ctx.currentTime;
+    const t0 = this.ctx.currentTime + 0.005;
 
     try {
-      holdAudioParam(voice.voiceGain.gain, now);
-      voice.voiceGain.gain.setTargetAtTime(0.0001, now, fadeSec * 0.35);
-      const stopAt = now + fadeSec + 0.04;
+      holdAudioParam(voice.voiceGain.gain, t0);
+      voice.voiceGain.gain.linearRampToValueAtTime(0, t0 + fadeSec);
+      const stopAt = t0 + fadeSec + 0.03;
 
       voice.oscA.stop(stopAt);
       voice.oscB.stop(stopAt);
@@ -637,7 +642,7 @@ export class AudioEngine {
   padDown(freq: number, normalizedX: number, normalizedY: number): void {
     if (!this.ctx) return;
 
-    const now = this.ctx.currentTime;
+    const t0 = this.ctx.currentTime + 0.008;
 
     this.padActive = true;
     this.padSustainSec = 0;
@@ -647,20 +652,24 @@ export class AudioEngine {
 
     this.setMorph(this.padNormalizedX, true);
 
+    // 6ms micro-duck before changing pitch eliminates clicks when re-pressing during a release tail
+    const pitchSnapAt = t0 + 0.006;
+
+    holdAudioParam(this.padEnvGain.gain, t0);
+    this.padEnvGain.gain.linearRampToValueAtTime(0.0001, pitchSnapAt);
+    this.padEnvGain.gain.linearRampToValueAtTime(0.22, pitchSnapAt + 0.03);
+    this.padAttackEndTime = pitchSnapAt + 0.036;
+    this.lastPadGainTarget = 0.22;
+
     for (let i = 0; i < 5; i++) {
       const osc = this.padHarmonics[i];
 
-      holdAudioParam(osc.frequency, now);
-      osc.frequency.setValueAtTime(freq * (i + 1), now);
+      holdAudioParam(osc.frequency, pitchSnapAt);
+      osc.frequency.setValueAtTime(freq * (i + 1), pitchSnapAt);
     }
 
-    holdAudioParam(this.padEnvGain.gain, now);
-    this.padEnvGain.gain.linearRampToValueAtTime(0.22, now + 0.032);
-    this.padAttackEndTime = now + 0.036;
-    this.lastPadGainTarget = 0.22;
-
-    holdAudioParam(this.padBendGain.gain, now);
-    this.padBendGain.gain.setTargetAtTime(1.0, now, 0.03);
+    holdAudioParam(this.padBendGain.gain, t0);
+    this.padBendGain.gain.setTargetAtTime(1.0, pitchSnapAt, 0.03);
   }
 
   /**

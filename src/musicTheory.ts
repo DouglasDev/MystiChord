@@ -186,11 +186,12 @@ export const MOODS: Record<MoodKey, MoodDefinition> = {
 };
 
 /**
- * 7 oval stones arranged in a 2 - 3 - 2 diamond configuration.
+ * 7 oval stones arranged in a 2 - 3 - 2 diamond configuration,
+ * with Thauma (Maqam Hijaz Kar) centered as the default stone.
  */
 export const MOOD_DIAMOND_ROWS: readonly (readonly MoodKey[])[] = [
-  ['blue', 'amber'],
-  ['green', 'rose', 'red'],
+  ['blue', 'rose'],
+  ['green', 'amber', 'red'],
   ['teal', 'purple'],
 ];
 

@@ -231,7 +231,7 @@ export function App() {
   const audio = audioRef.current;
 
   const [rootMidi, setRootMidi] = useState(38);
-  const [moodKey, setMoodKey] = useState<MoodKey>('blue');
+  const [moodKey, setMoodKey] = useState<MoodKey>('amber');
   const [modulationSeq, setModulationSeq] = useState(0);
   const [modulationDirection, setModulationDirection] = useState(1);
   const [keyHistory, setKeyHistory] = useState<number[]>([38]);
